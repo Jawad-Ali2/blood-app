@@ -8,20 +8,39 @@ import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Public()
   @Post('register')
   async register(
     @Body('username') username: string,
+    @Body('phone') phone: string,
     @Body('email') email: string,
+    @Body('cnic') cnic: string,
+    @Body('city') city: string,
+    @Body('age') age: number,
     @Body('password') password: string,
     @Body('confirmPassword') confirmPassword: string,
     @Res() res: Response,
   ) {
+
+    console.log(username,
+      phone,
+      email,
+      cnic,
+      city,
+      age,
+      password,
+      confirmPassword);
+
+    // Cnic should be 13 charaters long
     const tokens: Tokens = await this.authService.signUp(
       username,
+      phone,
       email,
+      cnic,
+      city,
+      age,
       password,
       confirmPassword,
     );
@@ -35,12 +54,12 @@ export class AuthController {
   @Public()
   @Post('login')
   async login(
-    @Body('username') username: string,
+    @Body('email') email: string,
     @Body('password') password: string,
     @Res() res: Response,
   ) {
     const { tokens, modifiedUser } = await this.authService.signIn(
-      username,
+      email,
       password,
     );
 

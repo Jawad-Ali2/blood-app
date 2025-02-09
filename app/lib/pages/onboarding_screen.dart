@@ -1,3 +1,4 @@
+import 'package:app/pages/signin.dart';
 import 'package:app/pages/signup.dart';
 import 'package:flutter/material.dart';
 
@@ -93,7 +94,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (context) => Placeholder()));
+                                  builder: (context) => SignInScreen()));
                         },
                         style: ElevatedButton.styleFrom(
                           elevation: 0,

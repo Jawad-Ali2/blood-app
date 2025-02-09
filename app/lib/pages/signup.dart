@@ -1,10 +1,9 @@
 import 'package:app/core/theme/app_decorations.dart';
+import 'package:app/core/network/dio_client.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import '';
 
 class SignupPage extends StatelessWidget {
-  const SignupPage({super.key});
+  SignupPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +41,7 @@ class SignupPage extends StatelessWidget {
                   ),
                   // const SizedBox(height: 16),
                   SizedBox(height: MediaQuery.of(context).size.height * 0.05),
-                  const SignupForm(),
+                  const SignUpForm(),
                   SizedBox(height: MediaQuery.of(context).size.height * 0.1),
                 ],
               ),
@@ -54,17 +53,62 @@ class SignupPage extends StatelessWidget {
   }
 }
 
-class SignupForm extends StatelessWidget {
-  const SignupForm({super.key});
+class SignUpForm extends StatefulWidget {
+  const SignUpForm({super.key});
+
+  @override
+  _SignUpFormState createState() {
+    return _SignUpFormState();
+  }
+}
+
+class _SignUpFormState extends State<SignUpForm> {
+  final DioClient _dioClient = DioClient();
+  final formKey = GlobalKey<FormState>();
+
+  final fullNameController = TextEditingController();
+  final phoneNoController = TextEditingController();
+  final emailController = TextEditingController();
+  final cnicController = TextEditingController();
+  final cityController = TextEditingController();
+  final ageController = TextEditingController();
+  final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+
+  Future<void> submitSignUp() async {
+    final username = fullNameController.text;
+    final phone = phoneNoController.text;
+    final email = emailController.text;
+    final cnic = cnicController.text;
+    final city = cityController.text;
+    final age = ageController.text;
+    final password = passwordController.text;
+    final confirmPassword = confirmPasswordController.text;
+
+    final response = _dioClient.dio.post("/auth/register", data: {
+      "username": username,
+      "phone": phone,
+      "email": email,
+      "cnic": cnic,
+      "city": city,
+      "age": age,
+      "password": password,
+      "confirmPassword": confirmPassword,
+    });
+
+    print(response);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Form(
+      key: formKey,
       child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 24),
             child: TextFormField(
+              controller: fullNameController,
               onSaved: (username) {},
               onChanged: (username) {},
               textInputAction: TextInputAction.next,
@@ -75,6 +119,7 @@ class SignupForm extends StatelessWidget {
             ),
           ),
           TextFormField(
+            controller: phoneNoController,
             onSaved: (number) {},
             onChanged: (number) {},
             keyboardType: TextInputType.phone,
@@ -86,6 +131,7 @@ class SignupForm extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: TextFormField(
+              controller: emailController,
               onSaved: (email) {},
               onChanged: (email) {},
               decoration: AppDecorations.textFieldDecoration(
@@ -95,6 +141,7 @@ class SignupForm extends StatelessWidget {
             ),
           ),
           TextFormField(
+            controller: cnicController,
             onSaved: (cnic) {},
             onChanged: (cnic) {},
             keyboardType: TextInputType.phone,
@@ -106,6 +153,7 @@ class SignupForm extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: TextFormField(
+              controller: cityController,
               onSaved: (city) {},
               onChanged: (city) {},
               keyboardType: TextInputType.phone,
@@ -116,16 +164,18 @@ class SignupForm extends StatelessWidget {
             ),
           ),
           TextFormField(
-            onSaved: (address) {},
-            onChanged: (address) {},
+            controller: ageController,
+            onSaved: (age) {},
+            onChanged: (age) {},
             decoration: AppDecorations.textFieldDecoration(
-                hintText: "Enter your address",
-                labelText: "Address",
+                hintText: "Enter Your Age",
+                labelText: "Age",
                 icon: locationPointIcon),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: TextFormField(
+              controller: passwordController,
               onSaved: (password) {},
               onChanged: (password) {},
               keyboardType: TextInputType.phone,
@@ -136,6 +186,7 @@ class SignupForm extends StatelessWidget {
             ),
           ),
           TextFormField(
+            controller: confirmPasswordController,
             onSaved: (confirmPassword) {},
             onChanged: (confirmPassword) {},
             decoration: AppDecorations.textFieldDecoration(
@@ -145,7 +196,9 @@ class SignupForm extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () {
+              submitSignUp();
+            },
             style: ElevatedButton.styleFrom(
               elevation: 0,
               backgroundColor: const Color(0xFFE0313B),
@@ -162,10 +215,6 @@ class SignupForm extends StatelessWidget {
     );
   }
 }
-
-
-
-
 
 // Icons
 const userIcon =
@@ -185,16 +234,16 @@ const locationPointIcon =
 </svg>''';
 
 const emailIcon =
-'''<svg width="10" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+    '''<svg width="10" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 0H16.5C17.33 0 18 0.67 18 1.5V12.5C18 13.33 17.33 14 16.5 14H1.5C0.67 14 0 13.33 0 12.5V1.5C0 0.67 0.67 0 1.5 0ZM16.5 2L9 6.75L1.5 2V12.5H16.5V2ZM1.5 1.5L9 6L16.5 1.5H1.5Z" fill="#626262"/>
 </svg>''';
 
 const cardIcon =
-'''<svg width="10" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+    '''<svg width="10" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 0H16.5C17.33 0 18 0.67 18 1.5V12.5C18 13.33 17.33 14 16.5 14H1.5C0.67 14 0 13.33 0 12.5V1.5C0 0.67 0.67 0 1.5 0ZM16.5 2H1.5V4H16.5V2ZM1.5 6V12.5H16.5V6H1.5ZM3 8H5.5V10H3V8ZM6.5 8H9V10H6.5V8Z" fill="#626262"/>
 </svg>''';
 
 const passwordIcon =
-'''<svg width="10" height="14" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    '''<svg width="10" height="14" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path fill-rule="evenodd" clip-rule="evenodd" d="M9 0C6.24 0 4 2.24 4 5V7H3C1.89 7 1 7.89 1 9V16C1 17.11 1.89 18 3 18H15C16.11 18 17 17.11 17 16V9C17 7.89 16.11 7 15 7H14V5C14 2.24 11.76 0 9 0ZM6 5C6 3.34 7.34 2 9 2C10.66 2 12 3.34 12 5V7H6V5ZM3 9H15V16H3V9ZM9 10C8.45 10 8 10.45 8 11V13C8 13.55 8.45 14 9 14C9.55 14 10 13.55 10 13V11C10 10.45 9.55 10 9 10Z" fill="#626262"/>
 </svg>''';

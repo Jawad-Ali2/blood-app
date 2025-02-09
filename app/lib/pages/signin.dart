@@ -1,4 +1,6 @@
 import 'package:app/core/theme/app_decorations.dart';
+import 'package:app/core/network/dio_client.dart';
+import 'package:app/pages/profile_dummy.dart';
 import 'package:app/pages/signup.dart';
 import 'package:flutter/material.dart';
 
@@ -77,8 +79,43 @@ const authOutlineInputBorder = OutlineInputBorder(
   borderRadius: BorderRadius.all(Radius.circular(100)),
 );
 
-class SignInForm extends StatelessWidget {
+class SignInForm extends StatefulWidget {
   const SignInForm({super.key});
+
+  @override
+  _SignInFormState createState() {
+    return _SignInFormState();
+  }
+}
+
+class _SignInFormState extends State<SignInForm> {
+  final DioClient _dioClient = DioClient();
+  final formKey = GlobalKey<FormState>();
+
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+
+  bool isLoading = false;
+
+  Future<void> submitSignIn() async {
+    print(emailController.text);
+
+    final email = emailController.text;
+    final password = passwordController.text;
+
+    final response = await _dioClient.dio
+        .post("/auth/login", data: {"email": email, "password": password});
+
+    setState(() {
+      isLoading = false;
+    });
+
+    print(response);
+    if (response.statusCode == 200) {
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => DummyProfile()));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +123,7 @@ class SignInForm extends StatelessWidget {
       child: Column(
         children: [
           TextFormField(
+            controller: emailController,
             onSaved: (email) {},
             onChanged: (email) {},
             textInputAction: TextInputAction.next,
@@ -97,6 +135,7 @@ class SignInForm extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: TextFormField(
+              controller: passwordController,
               onSaved: (password) {},
               onChanged: (password) {},
               obscureText: true,
@@ -109,19 +148,22 @@ class SignInForm extends StatelessWidget {
           const SizedBox(height: 8),
           ElevatedButton(
             onPressed: () {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => Placeholder()));
+              setState(() {
+                isLoading = true;
+              });
+              submitSignIn();
             },
             style: ElevatedButton.styleFrom(
-              elevation: 0,
-              backgroundColor: const Color(0xFFE0313B),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 48),
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(16)),
-              ),
-            ),
-            child: const Text("Continue"),
+                elevation: 0,
+                backgroundColor: const Color(0xFFE0313B),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 48),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(16)),
+                ),
+                disabledBackgroundColor: Colors.grey,
+                iconColor: Colors.white),
+            child: isLoading ? Icon(Icons.downloading) : const Text("Continue"),
           )
         ],
       ),
@@ -173,7 +215,8 @@ class NoAccountText extends StatelessWidget {
         ),
         GestureDetector(
           onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => SignupPage()));
+            Navigator.push(
+                context, MaterialPageRoute(builder: (context) => SignupPage()));
           },
           child: const Text(
             "Sign Up",

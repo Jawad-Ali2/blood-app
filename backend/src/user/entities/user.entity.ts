@@ -31,28 +31,28 @@ export class User {
   @Column({ unique: true })
   cnic: string;
 
-  @Column({ nullable: true })
+  @Column({nullable: true})
   bloodGroup: string;
 
-  @Column()
+  @Column({nullable: true})
   phone: string;
 
-  @Column({ nullable: true })
+  @Column({nullable: true})
   age: number;
 
-  @Column()
+  @Column({nullable: true})
   isVerified: boolean;
 
-  @Column()
+  @Column({nullable: true})
   isDonor: boolean;
 
-  @Column()
+  @Column({nullable: true})
   lastDonationDate: Date;
 
-  @Column()
+  @Column({nullable: true})
   credibilityPoints: number;
 
-  @Column()
+  @Column({nullable: true})
   city: string;
 
 //   @Column()

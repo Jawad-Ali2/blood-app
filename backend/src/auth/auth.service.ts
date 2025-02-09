@@ -18,21 +18,30 @@ export class AuthService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   async signUp(
     username: string,
+    phone: string,
     email: string,
+    cnic: string,
+    city: string,
+    age: number,
     password: string,
-    confirmPassowrd: string,
+    confirmPassword: string,
   ): Promise<Tokens> {
-    if (password !== confirmPassowrd) throw new BadRequestException();
+
+    if (password !== confirmPassword) throw new BadRequestException();
 
     try {
       const user = this.userRepository.create({
         username,
+        phone,
         email,
-        password,
+        cnic,
+        city,
+        age,
+        password
       });
 
       await this.userRepository.save(user);
@@ -42,6 +51,7 @@ export class AuthService {
         user.username,
         user.email,
         user.role,
+        user.cnic,
       );
       return tokens;
     } catch (err) {
@@ -49,10 +59,10 @@ export class AuthService {
     }
   }
 
-  async signIn(username: string, userPassword: string) {
+  async signIn(email: string, userPassword: string) {
     const user = await this.userRepository.findOne({
       where: {
-        username,
+        email,
       },
     });
 
@@ -67,6 +77,7 @@ export class AuthService {
       user.username,
       user.email,
       user.role,
+      user.cnic,
     );
 
     user.refreshToken = tokens.refreshToken;
@@ -112,6 +123,7 @@ export class AuthService {
       user.username,
       user.email,
       user.role,
+      user.cnic,
     );
 
     user.refreshToken = tokens.refreshToken;
@@ -125,12 +137,14 @@ export class AuthService {
     userId: string,
     username: string,
     email: string,
-    role: string,
+    role: string[],
+    cnic: string
   ): Promise<Tokens> {
     const payload = {
       sub: userId,
       username,
       email,
+      cnic,
       role,
     };
 
