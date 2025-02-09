@@ -19,27 +19,25 @@ export class User {
   @Column()
   username: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   email: string;
 
-  @Column({ default: 'donor' })
-  role: string;
+  @Column('simple-json', { default: JSON.stringify(['recipient']) })
+  role: string[];
 
   @Column({ nullable: true })
   refreshToken: string;
 
-  @Column({
-    unique: true,
-  })
+  @Column({ unique: true })
   cnic: string;
 
-  @Column()
+  @Column({ nullable: true })
   bloodGroup: string;
 
   @Column()
   phone: string;
 
-  @Column()
+  @Column({ nullable: true })
   age: number;
 
   @Column()
@@ -57,12 +55,11 @@ export class User {
   @Column()
   city: string;
 
-  @Column()
-  country: string;
+//   @Column()
+//   country: string;
 
   @BeforeInsert()
   async hashPassword() {
-    console.log('eh');
     this.password = await bcrypt.hash(this.password, 10);
   }
 
