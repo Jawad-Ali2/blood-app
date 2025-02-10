@@ -1,6 +1,6 @@
 import 'package:app/core/theme/app_decorations.dart';
-import 'package:app/core/network/dio_client.dart';
-import 'package:app/pages/profile_dummy.dart';
+// import 'package:app/core/network/dio_client.dart';
+// import 'package:app/pages/profile_dummy.dart';
 import 'package:app/pages/signup.dart';
 import 'package:flutter/material.dart';
 
@@ -89,7 +89,7 @@ class SignInForm extends StatefulWidget {
 }
 
 class _SignInFormState extends State<SignInForm> {
-  final DioClient _dioClient = DioClient();
+  // final DioClient _dioClient = DioClient();
   final formKey = GlobalKey<FormState>();
 
   final emailController = TextEditingController();
@@ -97,25 +97,25 @@ class _SignInFormState extends State<SignInForm> {
 
   bool isLoading = false;
 
-  Future<void> submitSignIn() async {
-    print(emailController.text);
+  // Future<void> submitSignIn() async {
+  //   print(emailController.text);
 
-    final email = emailController.text;
-    final password = passwordController.text;
+  //   final email = emailController.text;
+  //   final password = passwordController.text;
 
-    final response = await _dioClient.dio
-        .post("/auth/login", data: {"email": email, "password": password});
+  //   final response = await _dioClient.dio
+  //       .post("/auth/login", data: {"email": email, "password": password});
 
-    setState(() {
-      isLoading = false;
-    });
+  //   setState(() {
+  //     isLoading = false;
+  //   });
 
-    print(response);
-    if (response.statusCode == 200) {
-      Navigator.push(
-          context, MaterialPageRoute(builder: (context) => DummyProfile()));
-    }
-  }
+  //   print(response);
+  //   if (response.statusCode == 200) {
+  //     Navigator.push(
+  //         context, MaterialPageRoute(builder: (context) => DummyProfile()));
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -151,7 +151,7 @@ class _SignInFormState extends State<SignInForm> {
               setState(() {
                 isLoading = true;
               });
-              submitSignIn();
+              // submitSignIn();
             },
             style: ElevatedButton.styleFrom(
                 elevation: 0,

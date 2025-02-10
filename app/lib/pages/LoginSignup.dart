@@ -1,5 +1,5 @@
 
-import 'package:app/core/network/dio_client.dart';
+// import 'package:app/core/network/dio_client.dart';
 import 'package:flutter/material.dart';
 
 // LOGIN AND SIGNUP PAGE
@@ -11,7 +11,7 @@ class LoginSignup extends StatefulWidget {
 }
 
 class Assignment1TState extends State<LoginSignup> {
-  final DioClient _dioClient = DioClient();
+  // final DioClient _dioClient = DioClient();
 
   bool isLogin = true;
 

@@ -1,9 +1,9 @@
 import 'package:app/core/theme/app_decorations.dart';
-import 'package:app/core/network/dio_client.dart';
+// import 'package:app/core/network/dio_client.dart';
 import 'package:flutter/material.dart';
 
 class SignupPage extends StatelessWidget {
-  SignupPage({super.key});
+  const SignupPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +63,7 @@ class SignUpForm extends StatefulWidget {
 }
 
 class _SignUpFormState extends State<SignUpForm> {
-  final DioClient _dioClient = DioClient();
+  // final DioClient _dioClient = DioClient();
   final formKey = GlobalKey<FormState>();
 
   final fullNameController = TextEditingController();
@@ -75,29 +75,29 @@ class _SignUpFormState extends State<SignUpForm> {
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
 
-  Future<void> submitSignUp() async {
-    final username = fullNameController.text;
-    final phone = phoneNoController.text;
-    final email = emailController.text;
-    final cnic = cnicController.text;
-    final city = cityController.text;
-    final age = ageController.text;
-    final password = passwordController.text;
-    final confirmPassword = confirmPasswordController.text;
+  // Future<void> submitSignUp() async {
+  //   final username = fullNameController.text;
+  //   final phone = phoneNoController.text;
+  //   final email = emailController.text;
+  //   final cnic = cnicController.text;
+  //   final city = cityController.text;
+  //   final age = ageController.text;
+  //   final password = passwordController.text;
+  //   final confirmPassword = confirmPasswordController.text;
 
-    final response = _dioClient.dio.post("/auth/register", data: {
-      "username": username,
-      "phone": phone,
-      "email": email,
-      "cnic": cnic,
-      "city": city,
-      "age": age,
-      "password": password,
-      "confirmPassword": confirmPassword,
-    });
+    // final response = _dioClient.dio.post("/auth/register", data: {
+    //   "username": username,
+    //   "phone": phone,
+    //   "email": email,
+    //   "cnic": cnic,
+    //   "city": city,
+    //   "age": age,
+    //   "password": password,
+    //   "confirmPassword": confirmPassword,
+    // });
 
-    print(response);
-  }
+    // print(response);
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -197,7 +197,7 @@ class _SignUpFormState extends State<SignUpForm> {
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
-              submitSignUp();
+              // submitSignUp();
             },
             style: ElevatedButton.styleFrom(
               elevation: 0,
