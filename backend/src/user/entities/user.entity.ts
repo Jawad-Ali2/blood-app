@@ -3,10 +3,12 @@ import {
   BeforeUpdate,
   Column,
   Entity,
+  OneToMany,
   PrimaryColumn,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { Listing } from 'src/listing/entities/listings';
 
 @Entity()
 export class User {
@@ -54,6 +56,10 @@ export class User {
 
   @Column({nullable: true})
   city: string;
+
+  @OneToMany(() => Listing, (listing) => listing.user)
+  listings: Listing[];
+  
 
 //   @Column()
 //   country: string;

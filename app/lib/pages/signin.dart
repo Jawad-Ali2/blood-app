@@ -1,11 +1,16 @@
+import 'package:app/core/network/dio_client.dart';
 import 'package:app/core/theme/app_decorations.dart';
+
 // import 'package:app/core/network/dio_client.dart';
 // import 'package:app/pages/profile_dummy.dart';
 import 'package:app/pages/signup.dart';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 
 class SignInScreen extends StatelessWidget {
-  const SignInScreen({super.key});
+  final DioClient _dio = GetIt.instance.get<DioClient>();
+
+  SignInScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -1,7 +1,12 @@
+import 'package:app/core/network/dio_client.dart';
 import 'package:app/pages/onboarding_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-void main() {
+void main() async {
+  GetIt.instance.registerSingleton<DioClient>(DioClient());
+  await Hive.initFlutter();
   runApp(const BloodApp());
 }
 
