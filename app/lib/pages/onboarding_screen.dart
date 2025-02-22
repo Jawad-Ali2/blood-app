@@ -1,6 +1,7 @@
 import 'package:app/pages/signin.dart';
 import 'package:app/pages/signup.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -19,19 +20,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     },
     {
       "text":
-          "Find credible blood donors and recipients nearby \nwith just a few taps.",
+          "Find credible blood donors and recipients nearby in just a few taps.",
       "image":
           "https://cdni.iconscout.com/illustration/premium/thumb/blood-donor-appreciation-illustration-download-in-svg-png-gif-file-formats--donation-awareness-lifesaving-contributions-global-drive-volunteer-donors-world-day-pack-medical-equipment-illustrations-8778431.png"
     },
     {
       "text":
-          "Create a post to instantly connect with donors \nand save lives faster!",
+          "Create a post to instantly connect with donors and save lives faster!",
       "image":
           "https://cdni.iconscout.com/illustration/premium/thumb/blood-donation-awareness-illustration-download-in-svg-png-gif-file-formats--lifesaving-contributions-global-drive-volunteer-donors-supply-support-donor-appreciation-world-day-pack-medical-equipment-illustrations-8778426.png?f=webp"
     },
     {
       "text":
-          "Get automatic notifications when donors \nor recipients are available near you.",
+          "Get notified when donors or recipients are available near you.",
       "image":
           "https://cdni.iconscout.com/illustration/premium/thumb/lifesaving-contributions-illustration-download-in-svg-png-gif-file-formats--blood-donation-awareness-global-drive-volunteer-donors-world-donor-day-pack-medical-equipment-illustrations-8778427.png"
     }
@@ -40,6 +41,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SizedBox(
           width: double.infinity,
@@ -165,20 +167,23 @@ class _SplashContentState extends State<SplashContent> {
     return Column(
       children: <Widget>[
         const Spacer(),
-        const Text(
+        Text(
           "DonorX",
-          style: TextStyle(
+          style: GoogleFonts.dmSans(
             fontSize: 32,
             color: Color(0xFFB80F19),
             fontWeight: FontWeight.bold,
           ),
         ),
-        Text(
-          widget.text!,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 16,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            widget.text!,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
           ),
         ),
         const Spacer(flex: 2),

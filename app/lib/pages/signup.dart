@@ -1,6 +1,7 @@
+import 'package:app/core/network/dio_client.dart';
 import 'package:app/core/theme/app_decorations.dart';
-// import 'package:app/core/network/dio_client.dart';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 
 class SignupPage extends StatelessWidget {
   const SignupPage({super.key});
@@ -20,7 +21,7 @@ class SignupPage extends StatelessWidget {
         child: SizedBox(
           width: double.infinity,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 30),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: SingleChildScrollView(
               child: Column(
                 children: [
@@ -63,7 +64,7 @@ class SignUpForm extends StatefulWidget {
 }
 
 class _SignUpFormState extends State<SignUpForm> {
-  // final DioClient _dioClient = DioClient();
+  final _dioClient = GetIt.instance.get<DioClient>();
   final formKey = GlobalKey<FormState>();
 
   final fullNameController = TextEditingController();
@@ -75,29 +76,36 @@ class _SignUpFormState extends State<SignUpForm> {
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
 
-  // Future<void> submitSignUp() async {
-  //   final username = fullNameController.text;
-  //   final phone = phoneNoController.text;
-  //   final email = emailController.text;
-  //   final cnic = cnicController.text;
-  //   final city = cityController.text;
-  //   final age = ageController.text;
-  //   final password = passwordController.text;
-  //   final confirmPassword = confirmPasswordController.text;
+  bool isLoading = false;
 
-    // final response = _dioClient.dio.post("/auth/register", data: {
-    //   "username": username,
-    //   "phone": phone,
-    //   "email": email,
-    //   "cnic": cnic,
-    //   "city": city,
-    //   "age": age,
-    //   "password": password,
-    //   "confirmPassword": confirmPassword,
-    // });
+  Future<void> submitSignUp() async {
+    final username = fullNameController.text;
+    final phone = phoneNoController.text;
+    final email = emailController.text;
+    final cnic = cnicController.text;
+    final city = cityController.text;
+    final age = ageController.text;
+    final password = passwordController.text;
+    final confirmPassword = confirmPasswordController.text;
 
-    // print(response);
-  // }
+    final response = await _dioClient.dio.post("/auth/register", data: {
+      "username": username,
+      "phone": phone,
+      "email": email,
+      "cnic": cnic,
+      "city": city,
+      "age": age,
+      "password": password,
+      "confirmPassword": confirmPassword,
+    });
+    print(response);
+    if (response.statusCode == 200) {
+      Navigator.pushNamed(context, "login");
+    }
+    setState(() {
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -197,7 +205,10 @@ class _SignUpFormState extends State<SignUpForm> {
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
-              // submitSignUp();
+              setState(() {
+                isLoading = true;
+              });
+              submitSignUp();
             },
             style: ElevatedButton.styleFrom(
               elevation: 0,
@@ -208,7 +219,7 @@ class _SignUpFormState extends State<SignUpForm> {
                 borderRadius: BorderRadius.all(Radius.circular(16)),
               ),
             ),
-            child: const Text("Submit"),
+            child: isLoading? Icon(Icons.downloading) : const Text("Submit"),
           )
         ],
       ),

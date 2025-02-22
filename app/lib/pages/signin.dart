@@ -1,17 +1,11 @@
 import 'package:app/core/network/dio_client.dart';
 import 'package:app/core/theme/app_decorations.dart';
-
-// import 'package:app/core/network/dio_client.dart';
-// import 'package:app/pages/profile_dummy.dart';
-import 'package:app/pages/signup.dart';
 import 'package:app/pages/testing_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
 class SignInScreen extends StatelessWidget {
-  final DioClient _dio = GetIt.instance.get<DioClient>();
-
-  SignInScreen({super.key});
+  const SignInScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -48,27 +42,6 @@ class SignInScreen extends StatelessWidget {
                   SizedBox(height: MediaQuery.of(context).size.height * 0.05),
                   SignInForm(),
                   SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-                  // Row(
-                  //   mainAxisAlignment: MainAxisAlignment.center,
-                  //   children: [
-                  //     SocialCard(
-                  //       icon: SvgPicture.string(googleIcon),
-                  //       press: () {},
-                  //     ),
-                  //     Padding(
-                  //       padding: const EdgeInsets.symmetric(horizontal: 16),
-                  //       child: SocialCard(
-                  //         icon: SvgPicture.string(facebookIcon),
-                  //         press: () {},
-                  //       ),
-                  //     ),
-                  //     SocialCard(
-                  //       icon: SvgPicture.string(twitterIcon),
-                  //       press: () {},
-                  //     ),
-                  //   ],
-                  // ),
-                  // const SizedBox(height: 16),
                   const NoAccountText(),
                 ],
               ),
@@ -95,7 +68,6 @@ class SignInForm extends StatefulWidget {
 }
 
 class _SignInFormState extends State<SignInForm> {
-  // final DioClient _dioClient = DioClient();
   final _dioClient = GetIt.instance.get<DioClient>();
   final formKey = GlobalKey<FormState>();
 
@@ -221,8 +193,7 @@ class NoAccountText extends StatelessWidget {
         ),
         GestureDetector(
           onTap: () {
-            Navigator.push(
-                context, MaterialPageRoute(builder: (context) => SignupPage()));
+            Navigator.pushNamed(context, "signup");
           },
           child: const Text(
             "Sign Up",
