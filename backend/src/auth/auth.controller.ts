@@ -23,16 +23,6 @@ export class AuthController {
     @Body('confirmPassword') confirmPassword: string,
     @Res() res: Response,
   ) {
-
-    console.log(username,
-      phone,
-      email,
-      cnic,
-      city,
-      age,
-      password,
-      confirmPassword);
-
     // Cnic should be 13 charaters long
     const tokens: Tokens = await this.authService.signUp(
       username,
@@ -45,10 +35,9 @@ export class AuthController {
       confirmPassword,
     );
 
-    res.cookie('at', tokens.accessToken);
-    res.cookie('rt', tokens.refreshToken);
-
-    return res.status(200).json({ message: 'Tokens set in cookies' });
+    return res.status(201).json({
+      message: "User has been created successfully.",
+    });
   }
 
   @Public()
@@ -99,7 +88,6 @@ export class AuthController {
   @Public()
   @Post('refresh-token')
   async refreshAccessToken(@Req() req: Request, @Res() res: Response) {
-    console.log(req.cookies.rt);
     const refreshToken = req.cookies?.rt || req.body.refreshToken;
 
     // If a guest user tries to refresh token they immediately gets error and log em out
@@ -118,7 +106,7 @@ export class AuthController {
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     });
 
-    return res.status(200).json({
+    return res.status(201).json({
       message: 'Tokens set in cookies',
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,

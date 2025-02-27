@@ -1,9 +1,16 @@
+import 'package:app/core/enums/app_routes.dart';
+import 'package:app/core/storage/secure_storage.dart';
+import 'package:app/services/auth_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  final _storage = GetIt.instance.get<SecureStorage>();
+
+  HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,13 +22,60 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         toolbarHeight: 70,
         backgroundColor: Colors.red[600],
-        // centerTitle: true,
-        title: Text(
-          "DonorX",
-          style: GoogleFonts.dmSans(
-              color: Colors.white, fontWeight: FontWeight.w600),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "DonorX",
+              style: GoogleFonts.dmSans(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            FutureBuilder<User?>(
+              future: _storage.getUser(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Text(
+                    "Loading...",
+                    style: GoogleFonts.dmSans(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  );
+                }
+                if (!snapshot.hasData || snapshot.data == null) {
+                  return Text(
+                    "Guest",
+                    style: GoogleFonts.dmSans(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  );
+                }
+                return Text(
+                  snapshot.data!.username,
+                  // Assuming User has a 'name' property
+                  style: GoogleFonts.dmSans(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              },
+            ),
+          ],
         ),
+
+        // centerTitle: true,
+        // ),
+
+        // Text(
+        //   "",
+        //   style: GoogleFonts.dmSans(
+        //       color: Colors.white, fontWeight: FontWeight.w600),
+        // ),
       ),
+
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(vertical: 16),
         child: Column(
@@ -74,14 +128,18 @@ class HomePage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               IconButton(
-                tooltip: 'Search',
+                tooltip: 'Profile',
                 icon: const Icon(Icons.person),
-                onPressed: () {},
+                onPressed: () {
+                  context.push(AppRoutes.profile.path);
+                },
               ),
               IconButton(
-                tooltip: 'Favorite',
+                tooltip: 'Settings',
                 icon: const Icon(Icons.settings),
-                onPressed: () {},
+                onPressed: () {
+                  context.push(AppRoutes.settings.path);
+                },
               ),
             ],
           ),
@@ -111,7 +169,7 @@ class FindDonorsButton extends StatelessWidget {
           ),
         ),
         onPressed: () {
-          Navigator.pushNamed(context, "donors");
+          context.push(AppRoutes.donors.path);
         },
         child: const Text(
           "Find Donors",

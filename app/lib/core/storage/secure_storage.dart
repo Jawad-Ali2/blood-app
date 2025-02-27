@@ -1,9 +1,12 @@
+import 'package:app/services/auth_services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
 
 class SecureStorage {
   final _storage = const FlutterSecureStorage();
   final String _accessTokenKey = "accessToken";
   final String _refreshTokenKey = "refreshToken";
+  final String _userKey = "user";
 
   Future<void> setAccessToken(String accessToken) async {
     try {
@@ -23,6 +26,15 @@ class SecureStorage {
     }
   }
 
+  Future<bool> hasAccessToken() async {
+    try {
+      return await _storage.containsKey(key: _accessTokenKey);
+    } catch (e) {
+      print("Error retrieving token: $e");
+      return false;
+    }
+  }
+
   Future<void> setRefreshToken(String refreshToken) async {
     try {
       await _storage.write(key: _refreshTokenKey, value: refreshToken);
@@ -38,6 +50,40 @@ class SecureStorage {
     } catch (e) {
       print("Error retrieving token: $e");
       return null;
+    }
+  }
+
+  Future<bool> hasRefreshToken() async {
+    try {
+      return await _storage.containsKey(key: _refreshTokenKey);
+    } catch (e) {
+      print("Error retrieving token: $e");
+      return false;
+    }
+  }
+
+  Future<User?> getUser() async {
+    try {
+      String? userData = await _storage.read(key: _userKey);
+      if (userData != null) {
+        return User.fromJson(jsonDecode(userData));
+      }
+    } catch (e) {
+      print("Error retrieving token: $e");
+      return null;
+    }
+    return null;
+  }
+
+  Future<void> saveUser(User user) async {
+    await _storage.write(key: _userKey, value: jsonEncode(user.toJson()));
+  }
+
+  Future<void> clearAT() async {
+    try {
+      await _storage.delete(key: 'accessToken');
+    } catch (e) {
+      print("Error clearing storage: $e");
     }
   }
 

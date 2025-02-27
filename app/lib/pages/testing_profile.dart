@@ -12,12 +12,32 @@ class TestingProfile extends StatefulWidget {
 class _TestingProfile extends State<TestingProfile> {
   final storage = GetIt.instance.get<SecureStorage>();
 
-  String? token;
+  String? accessToken;
+  String? refreshToken;
 
   Future<void> getToken() async {
-    String? fetchedToken = await storage.getAccessToken();
+    String? fetchedAToken = await storage.getAccessToken();
+    String? fetchedRToken = await storage.getRefreshToken();
     setState(() {
-      token = fetchedToken; // Update token inside setState
+      accessToken = fetchedAToken;
+      refreshToken = fetchedRToken;
+    });
+  }
+
+  Future<void> clearTokens() async {
+    await storage.clearStorage();
+
+    setState(() {
+      accessToken = '';
+      refreshToken = '';
+    });
+  }
+
+  Future<void> deleteAT() async {
+    storage.clearAT();
+
+    setState(() {
+      accessToken = '';
     });
   }
 
@@ -27,8 +47,11 @@ class _TestingProfile extends State<TestingProfile> {
       appBar: AppBar(),
       body: Column(
         children: [
-          Text(token ?? "No Token Yet"),
-          FilledButton(onPressed: getToken, child: Text("Get Token"))
+          Text(accessToken ?? "No Token Yet"),
+          Text(refreshToken ?? "No Token Yet"),
+          FilledButton(onPressed: getToken, child: Text("Get Tokens")),
+          FilledButton(onPressed: deleteAT, child: Text("Clear Token")),
+          FilledButton(onPressed: clearTokens, child: Text("Clear Token"))
         ],
       ),
     );

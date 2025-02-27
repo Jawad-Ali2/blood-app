@@ -1,6 +1,7 @@
 import 'package:app/core/network/dio_client.dart';
 import 'package:app/core/theme/app_decorations.dart';
 import 'package:app/pages/testing_profile.dart';
+import 'package:app/services/auth_services.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
@@ -87,6 +88,9 @@ class _SignInFormState extends State<SignInForm> {
 
     print(response);
     if (response.statusCode == 200) {
+      String accessToken = response.data['accessToken'];
+      String refreshToken = response.data['refreshToken'];
+      AuthService().setTokens(accessToken, refreshToken);
       Navigator.push(
           context, MaterialPageRoute(builder: (context) => TestingProfile()));
     }
@@ -141,7 +145,7 @@ class _SignInFormState extends State<SignInForm> {
                 ),
                 disabledBackgroundColor: Colors.grey,
                 iconColor: Colors.white),
-            child: isLoading ? Icon(Icons.downloading) : const Text("Continue"),
+            child: isLoading ? CircularProgressIndicator(color: Colors.white) : const Text("Continue"),
           )
         ],
       ),

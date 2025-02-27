@@ -1,5 +1,9 @@
 import 'package:app/core/network/dio_client.dart';
 import 'package:app/core/theme/app_decorations.dart';
+import 'package:app/pages/testing_profile.dart';
+import 'package:app/services/auth_services.dart';
+
+// import 'package:app/core/network/dio_client.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
@@ -64,8 +68,10 @@ class SignUpForm extends StatefulWidget {
 }
 
 class _SignUpFormState extends State<SignUpForm> {
-  final _dioClient = GetIt.instance.get<DioClient>();
+  final DioClient _dioClient = GetIt.instance.get<DioClient>();
   final formKey = GlobalKey<FormState>();
+
+  bool isLoading = false;
 
   final fullNameController = TextEditingController();
   final phoneNoController = TextEditingController();
@@ -76,8 +82,6 @@ class _SignUpFormState extends State<SignUpForm> {
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
 
-  bool isLoading = false;
-
   Future<void> submitSignUp() async {
     final username = fullNameController.text;
     final phone = phoneNoController.text;
@@ -87,6 +91,10 @@ class _SignUpFormState extends State<SignUpForm> {
     final age = ageController.text;
     final password = passwordController.text;
     final confirmPassword = confirmPasswordController.text;
+
+    setState(() {
+      isLoading = true;
+    });
 
     final response = await _dioClient.dio.post("/auth/register", data: {
       "username": username,
@@ -99,13 +107,21 @@ class _SignUpFormState extends State<SignUpForm> {
       "confirmPassword": confirmPassword,
     });
     print(response);
-    if (response.statusCode == 200) {
-      Navigator.pushNamed(context, "login");
+
+    if (response.statusCode == 201) {
+      String accessToken = response.data['accessToken'];
+      String refreshToken = response.data['refreshToken'];
+      AuthService().setTokens(accessToken, refreshToken);
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => TestingProfile()));
     }
+
     setState(() {
       isLoading = false;
     });
   }
+
+  // TOMORROW I HAVE TO HANDLE ERROR MESSAGES + WHEN USER SUCCESSFULLY LOGS IN
 
   @override
   Widget build(BuildContext context) {
@@ -164,7 +180,7 @@ class _SignUpFormState extends State<SignUpForm> {
               controller: cityController,
               onSaved: (city) {},
               onChanged: (city) {},
-              keyboardType: TextInputType.phone,
+              keyboardType: TextInputType.text,
               decoration: AppDecorations.textFieldDecoration(
                   hintText: "Enter your city",
                   labelText: "City",
@@ -205,9 +221,6 @@ class _SignUpFormState extends State<SignUpForm> {
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
-              setState(() {
-                isLoading = true;
-              });
               submitSignUp();
             },
             style: ElevatedButton.styleFrom(
@@ -219,7 +232,8 @@ class _SignUpFormState extends State<SignUpForm> {
                 borderRadius: BorderRadius.all(Radius.circular(16)),
               ),
             ),
-            child: isLoading? Icon(Icons.downloading) : const Text("Submit"),
+            child:
+                isLoading ? CircularProgressIndicator() : const Text("Submit"),
           )
         ],
       ),
