@@ -6,6 +6,7 @@ import {
   OneToMany,
   PrimaryColumn,
   PrimaryGeneratedColumn,
+  Timestamp,
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Listing } from 'src/listing/entities/listings';
@@ -59,10 +60,9 @@ export class User {
 
   @OneToMany(() => Listing, (listing) => listing.user)
   listings: Listing[];
-  
 
-//   @Column()
-//   country: string;
+  @Column({type: 'timestamp', default: () => 'CURRENT_TIMESTAMP'})
+  createdAt: Timestamp;
 
   @BeforeInsert()
   async hashPassword() {

@@ -9,9 +9,6 @@ export class Listing {
     id: string;
 
     @Column()
-    location: string;
-
-    @Column()
     groupRequired: string;
 
     // @Column()
@@ -29,6 +26,9 @@ export class Listing {
     @Column({ nullable: true })
     willPay: boolean;
 
+    // I want location with latitude and longitude
+    @Column({ type: 'jsonb', nullable: true })
+    location: { latitude: number; longitude: number };
 
     // Will contain UserId
     @ManyToOne(() => User, (user) => user.listings)
@@ -41,14 +41,4 @@ export class Listing {
 
     @CreateDateColumn({ type: 'timestamp' })
     updatedAt: Date;
-
-    //   CreatedAt
-    // Location 
-    // GroupRequired
-    // Proof (Media)
-    // BagsRequired
-    // ValidTill
-    // PickAndDrop
-    // WillPay?
-
 }

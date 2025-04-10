@@ -1,6 +1,6 @@
 
 type PostListingDTO = {
-    location: string;
+    location: { latitude: number; longitude: number };
     groupRequired: string;
     // proof: string;
     bagsRequired: number;
