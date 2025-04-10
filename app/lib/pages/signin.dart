@@ -1,9 +1,12 @@
 import 'package:app/core/network/dio_client.dart';
+import 'package:app/core/storage/secure_storage.dart';
 import 'package:app/core/theme/app_decorations.dart';
 import 'package:app/pages/testing_profile.dart';
 import 'package:app/services/auth_services.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:app/core/enums/app_routes.dart';
+import 'package:go_router/go_router.dart';
 
 class SignInScreen extends StatelessWidget {
   const SignInScreen({super.key});
@@ -70,6 +73,7 @@ class SignInForm extends StatefulWidget {
 
 class _SignInFormState extends State<SignInForm> {
   final _dioClient = GetIt.instance.get<DioClient>();
+  final _storage = GetIt.instance.get<SecureStorage>();
   final formKey = GlobalKey<FormState>();
 
   final emailController = TextEditingController();
@@ -78,25 +82,36 @@ class _SignInFormState extends State<SignInForm> {
   bool isLoading = false;
 
   Future<void> submitSignIn() async {
-    print(emailController.text);
-
     final email = emailController.text;
     final password = passwordController.text;
+    try {
+      final response = await _dioClient.dio
+          .post("/auth/login", data: {"email": email, "password": password});
 
-    final response = await _dioClient.dio
-        .post("/auth/login", data: {"email": email, "password": password});
+      print(response.data);
+      if (response.statusCode == 200) {
+        String accessToken = response.data['accessToken'];
+        String refreshToken = response.data['refreshToken'];
+        final User user = User.fromJson(response.data['user']);
+        AuthService().setTokens(accessToken, refreshToken);
+        _storage.saveUser(user);
+        print(AppRoutes.home.path);
 
-    print(response);
-    if (response.statusCode == 200) {
-      String accessToken = response.data['accessToken'];
-      String refreshToken = response.data['refreshToken'];
-      AuthService().setTokens(accessToken, refreshToken);
-      Navigator.push(
-          context, MaterialPageRoute(builder: (context) => TestingProfile()));
+        if (mounted) {
+          context.go(AppRoutes.home.path);
+          // context.go(AppRoutes.dummyProfile.path);
+        }
+      }
+      setState(() {
+        isLoading = false;
+      });
+    } catch (e) {
+      print("Error: $e");
+      setState(() {
+        isLoading = false;
+      });
+      return;
     }
-    setState(() {
-      isLoading = false;
-    });
   }
 
   @override
@@ -145,7 +160,9 @@ class _SignInFormState extends State<SignInForm> {
                 ),
                 disabledBackgroundColor: Colors.grey,
                 iconColor: Colors.white),
-            child: isLoading ? CircularProgressIndicator(color: Colors.white) : const Text("Continue"),
+            child: isLoading
+                ? CircularProgressIndicator(color: Colors.white)
+                : const Text("Continue"),
           )
         ],
       ),

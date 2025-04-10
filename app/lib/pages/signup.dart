@@ -1,11 +1,15 @@
+import 'package:app/core/enums/app_routes.dart';
 import 'package:app/core/network/dio_client.dart';
 import 'package:app/core/theme/app_decorations.dart';
 import 'package:app/pages/testing_profile.dart';
 import 'package:app/services/auth_services.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 // import 'package:app/core/network/dio_client.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 
 class SignupPage extends StatelessWidget {
   const SignupPage({super.key});
@@ -78,7 +82,7 @@ class _SignUpFormState extends State<SignUpForm> {
   final emailController = TextEditingController();
   final cnicController = TextEditingController();
   final cityController = TextEditingController();
-  final ageController = TextEditingController();
+  final dateOfBirthController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
 
@@ -88,40 +92,71 @@ class _SignUpFormState extends State<SignUpForm> {
     final email = emailController.text;
     final cnic = cnicController.text;
     final city = cityController.text;
-    final age = ageController.text;
+    final dateOfBirth = dateOfBirthController.text;
     final password = passwordController.text;
     final confirmPassword = confirmPasswordController.text;
 
     setState(() {
       isLoading = true;
     });
+    try {
+      final response = await _dioClient.dio.post("/auth/register", data: {
+        "username": username,
+        "phone": phone,
+        "email": email,
+        "cnic": cnic,
+        "city": city,
+        "dob": dateOfBirth,
+        "password": password,
+        "confirmPassword": confirmPassword,
+      });
+      print(response);
+      if (response.statusCode == 201 && response.data["status"] == 'success') {
+        // Here I want to show a toast message or snackbar and then navigate to the home page
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text("Account created successfully! Redirecting To Sign In!"),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        if (mounted) {
+          context.replace(AppRoutes.login.path);
+        }
+      }
 
-    final response = await _dioClient.dio.post("/auth/register", data: {
-      "username": username,
-      "phone": phone,
-      "email": email,
-      "cnic": cnic,
-      "city": city,
-      "age": age,
-      "password": password,
-      "confirmPassword": confirmPassword,
-    });
-    print(response);
+      setState(() {
+        isLoading = false;
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print("Error: $e");
+      }
 
-    if (response.statusCode == 201) {
-      String accessToken = response.data['accessToken'];
-      String refreshToken = response.data['refreshToken'];
-      AuthService().setTokens(accessToken, refreshToken);
-      Navigator.push(
-          context, MaterialPageRoute(builder: (context) => TestingProfile()));
+      // first check if the erros is dio then Show snack bar of the error from the dio api the error should be of the api
+      if (e is DioException) {
+        print(e.response);
+        if (e.response?.statusCode == 400) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.response?.data['message']),
+              duration: const Duration(seconds: 10),
+            ),
+          );
+        } else if (e.response?.statusCode == 500) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Server Error! Please try again later."),
+              duration: Duration(seconds: 10),
+            ),
+          );
+        }
+      }
+      setState(() {
+        isLoading = false;
+      });
     }
-
-    setState(() {
-      isLoading = false;
-    });
   }
-
-  // TOMORROW I HAVE TO HANDLE ERROR MESSAGES + WHEN USER SUCCESSFULLY LOGS IN
 
   @override
   Widget build(BuildContext context) {
@@ -187,14 +222,30 @@ class _SignUpFormState extends State<SignUpForm> {
                   icon: locationPointIcon),
             ),
           ),
+
+          // I want to add a date picker here to take the date of birth
           TextFormField(
-            controller: ageController,
-            onSaved: (age) {},
-            onChanged: (age) {},
+            controller: dateOfBirthController,
+            readOnly: true,
+            onTap: () async {
+              DateTime? pickedDate = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime(1900),
+                lastDate: DateTime.now(),
+              );
+              if (pickedDate != null) {
+                setState(() {
+                  dateOfBirthController.text =
+                      "${pickedDate.toLocal()}".split(' ')[0];
+                });
+              }
+            },
             decoration: AppDecorations.textFieldDecoration(
-                hintText: "Enter Your Age",
-                labelText: "Age",
-                icon: locationPointIcon),
+              hintText: "Select your date of birth",
+              labelText: "Date of Birth",
+              icon: locationPointIcon,
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),

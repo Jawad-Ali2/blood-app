@@ -26,7 +26,7 @@ export class AuthService {
     email: string,
     cnic: string,
     city: string,
-    age: number,
+    dob: Date,
     password: string,
     confirmPassword: string,
   ): Promise<Tokens> {
@@ -34,15 +34,31 @@ export class AuthService {
     if (password !== confirmPassword) throw new BadRequestException();
 
     try {
+      console.log(dob, typeof dob);
+      const existingUser = await this.userRepository.findOne({
+        where: [{ email }, { cnic }],
+      });
+      if (existingUser) {
+        if (existingUser.email === email) {
+          throw new BadRequestException('Email already exists');
+        }
+        if (existingUser.cnic === cnic) {
+          throw new BadRequestException('Cnic already exists');
+        }
+      }
+
+      // convert dob to Date type
+
       const user = this.userRepository.create({
         username,
         phone,
         email,
         cnic,
         city,
-        age,
+        dateOfBirth: dob,
         password
       });
+
 
       await this.userRepository.save(user);
 
@@ -55,7 +71,7 @@ export class AuthService {
       );
       return tokens;
     } catch (err) {
-      throw new InternalServerErrorException();
+      throw err;
     }
   }
 

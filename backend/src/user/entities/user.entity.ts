@@ -40,8 +40,9 @@ export class User {
   @Column({nullable: true})
   phone: string;
 
-  @Column({nullable: true})
-  age: number;
+  // Instead of number age I want to store date of birth
+  @Column({type: 'date', nullable: true})
+  dateOfBirth: Date;
 
   @Column({nullable: true})
   isVerified: boolean;
