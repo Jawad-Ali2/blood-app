@@ -18,24 +18,28 @@ export class AuthController {
     @Body('email') email: string,
     @Body('cnic') cnic: string,
     @Body('city') city: string,
-    @Body('age') age: number,
+    @Body('dob') dob: Date,
     @Body('password') password: string,
     @Body('confirmPassword') confirmPassword: string,
     @Res() res: Response,
   ) {
     // Cnic should be 13 charaters long
+    const dateOfBirth = new Date(dob);
+    console.log('here');
     const tokens: Tokens = await this.authService.signUp(
       username,
       phone,
       email,
       cnic,
       city,
-      age,
+      dateOfBirth,
       password,
       confirmPassword,
     );
 
+
     return res.status(201).json({
+      status: 'success',
       message: "User has been created successfully.",
     });
   }
@@ -64,6 +68,8 @@ export class AuthController {
     });
 
     return res.status(200).json({
+      status: 'success',
+      message: 'User logged in successfully.',
       user: modifiedUser,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,

@@ -13,6 +13,7 @@ class DioClient {
   DioClient() {
     dio
       ..options.baseUrl = 'https://blood-app-production.up.railway.app'
+      ..options.baseUrl = 'http://10.4.28.139:3000'
       ..options.connectTimeout = Duration(seconds: 5000)
       ..options.receiveTimeout = Duration(seconds: 3000);
 
@@ -22,7 +23,7 @@ class DioClient {
     // Interceptors
     dio.interceptors
         .add(InterceptorsWrapper(onRequest: (options, handler) async {
-      print("Request: ${options.uri}");
+      print("Request: ${options.uri} ${options.method}");
       final accessToken = await _storage.getAccessToken();
       print('pre request token::::::: $accessToken');
       if (accessToken != null) {

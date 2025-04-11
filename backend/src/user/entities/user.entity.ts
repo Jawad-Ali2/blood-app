@@ -6,6 +6,7 @@ import {
   OneToMany,
   PrimaryColumn,
   PrimaryGeneratedColumn,
+  Timestamp,
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Listing } from 'src/listing/entities/listings';
@@ -39,8 +40,9 @@ export class User {
   @Column({nullable: true})
   phone: string;
 
-  @Column({nullable: true})
-  age: number;
+  // Instead of number age I want to store date of birth
+  @Column({type: 'date', nullable: true})
+  dateOfBirth: Date;
 
   @Column({nullable: true})
   isVerified: boolean;
@@ -59,10 +61,9 @@ export class User {
 
   @OneToMany(() => Listing, (listing) => listing.user)
   listings: Listing[];
-  
 
-//   @Column()
-//   country: string;
+  @Column({type: 'timestamp', default: () => 'CURRENT_TIMESTAMP'})
+  createdAt: Timestamp;
 
   @BeforeInsert()
   async hashPassword() {

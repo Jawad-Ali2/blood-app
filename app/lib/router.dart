@@ -9,22 +9,13 @@ import 'package:app/pages/settings.dart';
 import 'package:app/pages/signin.dart';
 import 'package:app/pages/signup.dart';
 import 'package:app/pages/splash_screen.dart';
+import 'package:app/pages/testing_profile.dart';
 import 'package:app/pages/user_profile.dart';
 import 'package:app/services/auth_services.dart';
 import 'package:go_router/go_router.dart';
 
 final GoRouter router = GoRouter(
     initialLocation: AppRoutes.splash.path,
-    // redirect: (context, state) async {
-    //   print("KLJGLKGJDGKLJGSLKGJDLKGj");
-    //   bool isLoggedIn = await AuthService().isUserLoggedIn();
-    //
-    //   if (isLoggedIn) {
-    //     return AppRoutes.home.path;
-    //   } else {
-    //     return AppRoutes.onboarding.path;
-    //   }
-    // },
     routes: [
       GoRoute(
           path: AppRoutes.login.path,
@@ -54,4 +45,7 @@ final GoRouter router = GoRouter(
       GoRoute(
           path: AppRoutes.splash.path,
           builder: (context, state) => SplashScreen()),
+      GoRoute(
+          path: AppRoutes.dummyProfile.path,
+          builder: (context, state) => TestingProfile()),
     ]);

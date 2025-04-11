@@ -38,9 +38,7 @@ class AuthService {
     if (token == null) return false;
 
     try {
-      print("HELLO I WAS SENT BEFORE SENDING THE API REQUEST $token");
       Response response = await _dioClient.dio.get('/auth/profile');
-      // options: Options(headers: {"Authorization": "Bearer $token"}));
 
       if (response.statusCode == 200) {
         User user = User.fromJson(response.data);

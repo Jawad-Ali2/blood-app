@@ -8,7 +8,8 @@ enum AppRoutes {
   settings,
   donors,
   map,
-  splash
+  splash,
+  dummyProfile
 }
 
 extension AppRoutesExtension on AppRoutes {
@@ -34,6 +35,8 @@ extension AppRoutesExtension on AppRoutes {
         return "/map";
       case AppRoutes.splash:
         return "/splash";
+      case AppRoutes.dummyProfile:
+        return "/dummyProfile";
     }
   }
 }

@@ -27,12 +27,10 @@ class BloodApp extends StatefulWidget {
 }
 
 class _BloodAppState extends State<BloodApp> {
-  // Future<bool>? _isLoggedIn;
 
   @override
   void initState() {
     super.initState();
-    // _isLoggedIn = AuthService().isUserLoggedIn();
   }
 
   @override
@@ -44,23 +42,6 @@ class _BloodAppState extends State<BloodApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
         useMaterial3: true,
       ),
-      // initialRoute: "// home",
-      // routes: routes,
-      // home: FutureBuilder<bool>(
-      //     future: _isLoggedIn,
-      //     builder: (context, snapshot) {
-      //       if (snapshot.connectionState == ConnectionState.waiting) {
-      //         return Scaffold(
-      //           body: Center(child: CircularProgressIndicator()),
-      //         );
-      //       }
-      //
-      //       if (snapshot.data == true) {
-      //         return TestingProfile();
-      //       } else {
-      //         return OnboardingScreen();
-      //       }
-      //     }),
       debugShowCheckedModeBanner: false,
     );
   }
