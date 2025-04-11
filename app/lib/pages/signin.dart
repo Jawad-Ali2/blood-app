@@ -1,9 +1,11 @@
+import 'package:app/core/enums/app_routes.dart';
 import 'package:app/core/network/dio_client.dart';
 import 'package:app/core/theme/app_decorations.dart';
 import 'package:app/pages/testing_profile.dart';
 import 'package:app/services/auth_services.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 
 class SignInScreen extends StatelessWidget {
   const SignInScreen({super.key});
@@ -91,8 +93,7 @@ class _SignInFormState extends State<SignInForm> {
       String accessToken = response.data['accessToken'];
       String refreshToken = response.data['refreshToken'];
       AuthService().setTokens(accessToken, refreshToken);
-      Navigator.push(
-          context, MaterialPageRoute(builder: (context) => TestingProfile()));
+      context.go(AppRoutes.home.path);
     }
     setState(() {
       isLoading = false;
@@ -197,7 +198,7 @@ class NoAccountText extends StatelessWidget {
         ),
         GestureDetector(
           onTap: () {
-            Navigator.pushNamed(context, "signup");
+            context.go(AppRoutes.signup.path);
           },
           child: const Text(
             "Sign Up",

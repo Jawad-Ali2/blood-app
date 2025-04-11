@@ -2,6 +2,7 @@ import 'package:app/core/enums/app_routes.dart';
 import 'package:app/pages/LoginSignup.dart';
 import 'package:app/pages/donors_page.dart';
 import 'package:app/pages/home_page.dart';
+import 'package:app/pages/map_screen.dart';
 import 'package:app/pages/onboarding_screen.dart';
 import 'package:app/pages/otp_screen.dart';
 import 'package:app/pages/settings.dart';
@@ -47,6 +48,9 @@ final GoRouter router = GoRouter(
       GoRoute(
           path: AppRoutes.donors.path,
           builder: (context, state) => DonorsPage()),
+      GoRoute(
+          path: AppRoutes.map.path,
+          builder: (context, state) => MapScreen()),
       GoRoute(
           path: AppRoutes.splash.path,
           builder: (context, state) => SplashScreen()),

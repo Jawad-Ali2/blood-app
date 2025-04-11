@@ -34,7 +34,9 @@ dependencies:
   hive:
   hive_flutter:
   get_it:
-  google_maps_flutter:
+  geolocator:
+  flutter_map:
+  latlong2:
   flutter_secure_storage: ^9.2.4
   google_fonts:
 

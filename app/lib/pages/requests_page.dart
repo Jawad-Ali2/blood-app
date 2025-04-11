@@ -1,34 +1,157 @@
+//       body: _isLoading
+//           ? Center(child: CircularProgressIndicator())
+//           : _bloodRequests.isEmpty
+//               ? Center(child: Text("No requests found."))
+//               : ListView.builder(
+//                   itemCount: _bloodRequests.length,
+//                   itemBuilder: (context, index) {
+//                     return BloodRequestCard(
+//                       post: _bloodRequests[index],
+//                       onTap: () {
+//                         print("Tapped on ${_bloodRequests[index].groupRequired}");
+//                       },
+//                     );
+//                   },
+//                 ),
+//     );
+//   }
+// }
+
+// // Reusable Blood Request Card Widget
+// class BloodRequestCard extends StatelessWidget {
+//   final Request post;
+//   final VoidCallback onTap;
+//
+//   const BloodRequestCard({super.key, required this.post, required this.onTap});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return GestureDetector(
+//       onTap: onTap,
+//       child: Card(
+//         margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+//         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+//         elevation: 3,
+//         child: Padding(
+//           padding: const EdgeInsets.all(12.0),
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               // Blood Group (Highlighted)
+//               Row(
+//                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                 children: [
+//                   Text(
+//                     post.groupRequired,
+//                     style: TextStyle(
+//                       fontSize: 20,
+//                       fontWeight: FontWeight.bold,
+//                       color: Colors.red,
+//                     ),
+//                   ),
+//                   Text(
+//                     // "${post.distance.toStringAsFixed(1)} km away",
+//                     "-- km away",
+//                     style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+//                   ),
+//                 ],
+//               ),
+//
+//               const SizedBox(height: 6),
+//
+//               // Location & Bags Required
+//               Text(
+//                 "${post.location} • ${post.bagsRequired} bag(s) required",
+//                 style: TextStyle(fontSize: 16),
+//               ),
+//
+//               // Required Till Date
+//               Text(
+//                 "Needed by: ${post.requiredTill.toLocal()}".split(' ')[0],
+//                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+//               ),
+//
+//               const SizedBox(height: 6),
+//
+//               // Additional Info (Icons for pick & drop, will pay)
+//               Row(
+//                 children: [
+//                   if (post.pickAndDrop)
+//                     Icon(Icons.local_taxi, size: 18, color: Colors.green),
+//                   if (post.pickAndDrop) const SizedBox(width: 4),
+//                   if (post.willPay)
+//                     Icon(Icons.attach_money, size: 18, color: Colors.blue),
+//                   if (post.willPay) const SizedBox(width: 4),
+//                   Text("Credibility: ${post.userCredibility}/10",
+//                       style:
+//                           TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+//                 ],
+//               ),
+//
+//               const SizedBox(height: 8),
+//
+//               // Contact Button
+//               SizedBox(
+//                 width: double.infinity,
+//                 child: ElevatedButton.icon(
+//                   onPressed: () {
+//                     print("Contacting ${post.userContact}");
+//                   },
+//                   icon: Icon(Icons.phone),
+//                   label: Text("Contact"),
+//                   style: ElevatedButton.styleFrom(
+//                     shape: RoundedRectangleBorder(
+//                       borderRadius: BorderRadius.circular(8),
+//                     ),
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
+
 import 'package:app/core/network/dio_client.dart';
-import 'package:app/pages/map_screen.dart';
+import 'package:app/models/request.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
-class DonorsPage extends StatefulWidget {
-  const DonorsPage({super.key});
+class RequestsPage extends StatefulWidget {
+  const RequestsPage({super.key});
 
   @override
-  State<DonorsPage> createState() => _DonorsPageState();
+  State<RequestsPage> createState() => _RequestsPageState();
 }
 
-class _DonorsPageState extends State<DonorsPage> {
+class _RequestsPageState extends State<RequestsPage> {
   final _dioClient = GetIt.instance.get<DioClient>();
-  List donors = [];
-
-  Future fetchDummyListings() async {
-    try {
-      final response = await _dioClient.dio.get("/listing/dummyListings");
-      // print(response);
-      donors = response.data;
-      print(donors);
-    } catch (e) {
-      print("Error fetching dummy listings: $e");
-    }
-  }
+  List<Request> _bloodRequests = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchDummyListings();
+    // fetchBloodRequests();
+  }
+
+  Future<void> fetchBloodRequests() async {
+    try {
+      final response = await _dioClient.dio.get('/listing');
+
+      if (response.statusCode == 200) {
+        List data = response.data;
+        setState(() {
+          _bloodRequests = data.map((json) => Request.fromJson(json)).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error fetching data: $e");
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -47,9 +170,12 @@ class _DonorsPageState extends State<DonorsPage> {
               const SizedBox(height: 16),
               const BloodGroups(),
               const SizedBox(height: 16),
-              const DonorMap(),
-              const SizedBox(height: 16),
-              Donors(donors: donors,),
+              // _isLoading
+              //     ? Center(child: CircularProgressIndicator())
+              //     : _bloodRequests.isEmpty
+              //         ? Center(child: Text("No requests found."))
+              //         : Donors(),
+              Donors(),
             ],
           ),
         ),
@@ -166,24 +292,24 @@ List<Map<String, dynamic>> demoCategories = [
   {"title": "O-", "isActive": false},
 ];
 
-class Donors extends StatelessWidget {
-  const Donors({
-    super.key,
-    required this.donors,
-  });
+class Donors extends StatefulWidget {
+  const Donors({super.key});
 
-  final List donors;
+  @override
+  State<Donors> createState() => _DonorsState();
+}
 
+class _DonorsState extends State<Donors> {
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ...List.generate(
-          donors.length,
+          demoData.length,
           (index) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: DonorCard(
+            child: ItemCard(
               name: demoData[index]["name"],
               address: demoData[index]["address"],
               image: demoData[index]["image"],
@@ -197,8 +323,8 @@ class Donors extends StatelessWidget {
   }
 }
 
-class DonorCard extends StatelessWidget {
-  const DonorCard({
+class ItemCard extends StatelessWidget {
+  const ItemCard({
     super.key,
     required this.name,
     required this.address,
@@ -212,12 +338,6 @@ class DonorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // final distance = Geolocator.distanceBetween(
-    //   userLocation.latitude,
-    //   userLocation.longitude,
-    //   donor.location.latitude,
-    //   donor.location.longitude,
-    // ) / 1000;
     return InkWell(
       borderRadius: const BorderRadius.all(Radius.circular(8)),
       onTap: onContactPressed,
@@ -269,7 +389,6 @@ class DonorCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    // Text("• ${distance.toStringAsFixed(1)} km away"),
                   ],
                 ),
               ),
@@ -294,28 +413,6 @@ class DonorCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class DonorMap extends StatefulWidget {
-  const DonorMap({super.key});
-
-  @override
-  State<DonorMap> createState() => _DonorMapState();
-}
-
-class _DonorMapState extends State<DonorMap> {
-  @override
-  Widget build(BuildContext context) {
-    final double screenHeight = MediaQuery.of(context).size.height;
-    final double screenWidth = MediaQuery.of(context).size.width;
-
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20),
-      height: screenHeight * 0.4,
-      width: screenWidth,
-      child: MapScreen(),
     );
   }
 }

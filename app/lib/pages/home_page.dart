@@ -55,7 +55,6 @@ class HomePage extends StatelessWidget {
                 }
                 return Text(
                   snapshot.data!.username,
-                  // Assuming User has a 'name' property
                   style: GoogleFonts.dmSans(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -65,15 +64,6 @@ class HomePage extends StatelessWidget {
             ),
           ],
         ),
-
-        // centerTitle: true,
-        // ),
-
-        // Text(
-        //   "",
-        //   style: GoogleFonts.dmSans(
-        //       color: Colors.white, fontWeight: FontWeight.w600),
-        // ),
       ),
 
       body: SingleChildScrollView(
@@ -86,20 +76,6 @@ class HomePage extends StatelessWidget {
             FindDonorsButton(screenWidth: screenWidth),
             const SizedBox(height: 12),
             StatsBar(),
-            SizedBox(height: 12),
-            Container(
-              margin: EdgeInsets.symmetric(horizontal: 20),
-              height: screenHeight * 0.4,
-              width: screenWidth,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12.0),
-                image: const DecorationImage(
-                  image: NetworkImage(
-                      "https://developers.google.com/static/maps/images/landing/react-codelab-thumbnail.png"),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
             const SizedBox(height: 12),
           ],
         ),
