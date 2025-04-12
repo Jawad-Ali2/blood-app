@@ -12,8 +12,10 @@ class DioClient {
 
   DioClient() {
     dio
-      ..options.baseUrl = 'https://blood-app-production.up.railway.app'
-      ..options.baseUrl = 'http://10.4.28.139:3000'
+
+      // ..options.baseUrl = 'https://blood-app-production.up.railway.app'
+      // ..options.baseUrl = 'http://10.4.28.139:3000'
+      ..options.baseUrl = 'http://192.168.1.59:3000'
       ..options.connectTimeout = Duration(seconds: 5000)
       ..options.receiveTimeout = Duration(seconds: 3000);
 

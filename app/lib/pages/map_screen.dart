@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:app/core/network/dio_client.dart';
+import 'package:get_it/get_it.dart';
 
 import '../models/donor.dart';
 import '../services/location_service.dart';
@@ -54,144 +56,6 @@ class DonorCard extends StatelessWidget {
   }
 }
 
-// class MapScreen extends StatefulWidget {
-//   @override
-//   State<MapScreen> createState() => _MapScreenState();
-// }
-//
-// class _MapScreenState extends State<MapScreen> {
-//   LatLng? userLocation;
-//   List<Donor> donors = [];
-//   final MapController _mapController = MapController();
-//
-//   @override
-//   void initState() {
-//     super.initState();
-//     loadLocationAndData();
-//   }
-//
-//   Future<void> loadLocationAndData() async {
-//     try {
-//       Position position = await LocationService.getCurrentLocation();
-//       userLocation = LatLng(position.latitude, position.longitude);
-//
-//       // Simulated API data
-//       donors = [
-//         Donor(
-//             name: 'Ali',
-//             bloodGroup: 'O+',
-//             location: LatLng(33.6844, 73.0479),
-//             contact: '0300-1234567'),
-//         Donor(
-//             name: 'Sara',
-//             bloodGroup: 'A-',
-//             location: LatLng(33.6900, 73.0500),
-//             contact: '0312-4567890'),
-//         Donor(
-//             name: 'Usman',
-//             bloodGroup: 'B+',
-//             location: LatLng(33.6980, 73.0400),
-//             contact: '0345-9876543'),
-//       ];
-//
-//       // Sort by distance
-//       donors.sort((a, b) {
-//         final distA = Geolocator.distanceBetween(
-//           userLocation!.latitude,
-//           userLocation!.longitude,
-//           a.location.latitude,
-//           a.location.longitude,
-//         );
-//         final distB = Geolocator.distanceBetween(
-//           userLocation!.latitude,
-//           userLocation!.longitude,
-//           b.location.latitude,
-//           b.location.longitude,
-//         );
-//         return distA.compareTo(distB);
-//       });
-//
-//       setState(() {});
-//     } catch (e) {
-//       print("Error: $e");
-//     }
-//   }
-//
-//   void _goToUserLocation() {
-//     if (mounted && userLocation != null) {
-//       WidgetsBinding.instance.addPostFrameCallback((_) {
-//         _mapController.move(userLocation!, 13.0);
-//       });
-//     }
-//   }
-//
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     if (userLocation == null) {
-//       return Scaffold(body: Center(child: CircularProgressIndicator()));
-//     }
-//
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text("Nearby Donors"),
-//         actions: [
-//           IconButton(
-//             icon: Icon(Icons.my_location),
-//             onPressed: _goToUserLocation,
-//           ),
-//         ],
-//       ),
-//       body: Column(
-//         children: [
-//           SizedBox(
-//               height: 300,
-//               child: FlutterMap(
-//                 // 31.309428, 74.204854
-//                 // 31.308658, 74.204339
-//                 children: [
-//                   TileLayer(
-//                     urlTemplate:
-//                         "https://tile.openstreetmap.org/{z}/{x}/{y}{r}.png",
-//                     subdomains: ['a', 'b', 'c'],
-//                   ),
-//                   MarkerLayer(
-//                     markers: [
-//                       Marker(
-//                         point: userLocation!,
-//                         width: 80,
-//                         height: 80,
-//                         child:
-//                             Icon(Icons.person_pin, size: 40, color: Colors.red),
-//                       ),
-//                       ...donors.map(
-//                         (d) => Marker(
-//                           point: d.location,
-//                           width: 80,
-//                           height: 80,
-//                           child: Icon(Icons.bloodtype,
-//                               size: 32, color: Colors.blue),
-//                         ),
-//                       )
-//                     ],
-//                   ),
-//                 ],
-//               )),
-//           Expanded(
-//             child: ListView.builder(
-//               itemCount: donors.length,
-//               itemBuilder: (_, index) => DonorCard(
-//                 donor: donors[index],
-//                 userLocation: userLocation!,
-//               ),
-//             ),
-//           )
-//         ],
-//       ),
-//     );
-//   }
-// }
-
 class MapScreen extends StatefulWidget {
   @override
   _MapScreenState createState() => _MapScreenState();
@@ -201,6 +65,8 @@ class _MapScreenState extends State<MapScreen> {
   LatLng? userLocation;
   List<Donor> donors = [];
   final MapController _mapController = MapController();
+  final _dioClient = GetIt.instance.get<DioClient>();
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -213,27 +79,38 @@ class _MapScreenState extends State<MapScreen> {
       Position position = await LocationService.getCurrentLocation();
       userLocation = LatLng(position.latitude, position.longitude);
 
-      donors = [
-        Donor(
-            name: 'Ali',
-            bloodGroup: 'O+',
-            location: LatLng(33.6844, 73.0479),
-            contact: '0300-1234567'),
-        Donor(
-            name: 'Sara',
-            bloodGroup: 'A-',
-            location: LatLng(33.6900, 73.0500),
-            contact: '0312-4567890'),
-        Donor(
-            name: 'Usman',
-            bloodGroup: 'B+',
-            location: LatLng(33.6980, 73.0400),
-            contact: '0345-9876543'),
-      ];
+      // Fetch donors from API
+      final response =
+          await _dioClient.dio.get("/user/donors/nearby", queryParameters: {
+        "lat": userLocation!.latitude,
+        "lng": userLocation!.longitude,
+        "radius": "10" // 10km radius
+      });
 
-      setState(() {});
-    } catch (e) {;
+      List apiDonors = response.data['data'] ?? [];
+
+      // Convert API donors to Donor model objects
+      donors = apiDonors.map((donor) {
+        // Parse coordinates string "lat,lng" to LatLng object
+        List<String> coords = donor['coordinates'].split(',');
+        double lat = double.parse(coords[0]);
+        double lng = double.parse(coords[1]);
+
+        return Donor(
+            name: donor['username'] ?? 'Unknown',
+            bloodGroup: donor['bloodGroup'] ?? 'Unknown',
+            location: LatLng(lat, lng),
+            contact: donor['phone'] ?? 'N/A');
+      }).toList();
+
+      setState(() {
+        isLoading = false;
+      });
+    } catch (e) {
       print("Error: $e");
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -245,7 +122,7 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (userLocation == null) {
+    if (userLocation == null || isLoading) {
       return Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
@@ -256,25 +133,30 @@ class _MapScreenState extends State<MapScreen> {
             mapController: _mapController,
             children: [
               TileLayer(
-                urlTemplate:
-                    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 subdomains: ['a', 'b', 'c'],
               ),
               MarkerLayer(
                 markers: [
+                  // User marker
                   Marker(
                     point: userLocation!,
                     width: 40,
                     height: 40,
-                    child: Icon(Icons.person_pin_circle_rounded, size: 35, color: Colors.teal[400]),
+                    child: Icon(Icons.person_pin_circle_rounded,
+                        size: 35, color: Colors.teal[400]),
                   ),
+                  // Donor markers
                   ...donors.map(
-                    (d) => Marker(
-                      point: d.location,
+                    (donor) => Marker(
+                      point: donor.location,
                       width: 40,
                       height: 40,
-                      child:
-                          Icon(Icons.bloodtype, size: 32, color: Colors.blue),
+                      child: Icon(
+                        Icons.bloodtype,
+                        size: 32,
+                        color: _getBloodGroupColor(donor.bloodGroup),
+                      ),
                     ),
                   ),
                 ],
@@ -295,5 +177,25 @@ class _MapScreenState extends State<MapScreen> {
         ],
       ),
     );
+  }
+
+  // Helper method to determine marker color based on blood group
+  Color _getBloodGroupColor(String bloodGroup) {
+    switch (bloodGroup) {
+      case 'A+':
+      case 'A-':
+        return Colors.red;
+      case 'B+':
+      case 'B-':
+        return Colors.blue;
+      case 'AB+':
+      case 'AB-':
+        return Colors.purple;
+      case 'O+':
+      case 'O-':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
   }
 }

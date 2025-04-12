@@ -13,22 +13,43 @@ class DonorsPage extends StatefulWidget {
 class _DonorsPageState extends State<DonorsPage> {
   final _dioClient = GetIt.instance.get<DioClient>();
   List donors = [];
+  bool isLoading = true;
+  String selectedBloodGroup = "All";
 
-  Future fetchDummyListings() async {
+  Future fetchDonors({String? bloodGroup}) async {
+    setState(() {
+      isLoading = true;
+    });
+
     try {
-      final response = await _dioClient.dio.get("/listing/dummyListings");
-      // print(response);
-      donors = response.data;
-      print(donors);
+      final response = bloodGroup != null && bloodGroup != "All"
+          ? await _dioClient.dio.get("/user/donors/filter",
+              queryParameters: {"bloodGroup": bloodGroup})
+          : await _dioClient.dio.get("/user/donors");
+
+      setState(() {
+        donors = response.data['data'] ?? [];
+        isLoading = false;
+      });
     } catch (e) {
-      print("Error fetching dummy listings: $e");
+      setState(() {
+        isLoading = false;
+      });
+      print("Error fetching donors: $e");
     }
+  }
+
+  void filterByBloodGroup(String bloodGroup) {
+    setState(() {
+      selectedBloodGroup = bloodGroup;
+    });
+    fetchDonors(bloodGroup: bloodGroup);
   }
 
   @override
   void initState() {
     super.initState();
-    fetchDummyListings();
+    fetchDonors();
   }
 
   @override
@@ -36,23 +57,38 @@ class _DonorsPageState extends State<DonorsPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        title: const Text("Available Donors",
+            style: TextStyle(color: Colors.white)),
         toolbarHeight: 70,
         backgroundColor: Colors.red[600],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 16),
-              const BloodGroups(),
-              const SizedBox(height: 16),
-              const DonorMap(),
-              const SizedBox(height: 16),
-              Donors(donors: donors,),
-            ],
-          ),
-        ),
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator(color: Colors.red))
+            : SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    BloodGroups(
+                      onBloodGroupSelected: filterByBloodGroup,
+                      selectedBloodGroup: selectedBloodGroup,
+                    ),
+                    const SizedBox(height: 16),
+                    const DonorMap(),
+                    const SizedBox(height: 16),
+                    donors.isEmpty
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: Text("No donors found",
+                                  style: TextStyle(fontSize: 18)),
+                            ),
+                          )
+                        : Donors(donors: donors),
+                  ],
+                ),
+              ),
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.red[600],
@@ -92,15 +128,20 @@ class _DonorsPageState extends State<DonorsPage> {
 }
 
 class BloodGroups extends StatefulWidget {
-  const BloodGroups({super.key});
+  final Function(String) onBloodGroupSelected;
+  final String selectedBloodGroup;
+
+  const BloodGroups({
+    super.key,
+    required this.onBloodGroupSelected,
+    required this.selectedBloodGroup,
+  });
 
   @override
   State<BloodGroups> createState() => _BloodGroupsState();
 }
 
 class _BloodGroupsState extends State<BloodGroups> {
-  int selectedIndex = 0;
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -127,12 +168,12 @@ class _BloodGroupsState extends State<BloodGroups> {
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: ElevatedButton(
                       onPressed: () {
-                        setState(() {
-                          selectedIndex = index;
-                        });
+                        widget.onBloodGroupSelected(
+                            demoCategories[index]["title"]);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedIndex == index
+                        backgroundColor: widget.selectedBloodGroup ==
+                                demoCategories[index]["title"]
                             ? Colors.red[600]
                             : const Color(0xFFA4A2A2),
                         foregroundColor: Colors.white,
@@ -182,12 +223,14 @@ class Donors extends StatelessWidget {
         ...List.generate(
           donors.length,
           (index) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: DonorCard(
-              name: demoData[index]["name"],
-              address: demoData[index]["address"],
-              image: demoData[index]["image"],
-              bloodGroup: demoData[index]["bloodGroup"],
+              name: donors[index]["username"] ?? "Unknown",
+              address: donors[index]["city"] ?? "Unknown",
+              image:
+                  "https://randomuser.me/api/portraits/${index % 2 == 0 ? 'men' : 'women'}/${(index % 10) + 1}.jpg",
+              bloodGroup: donors[index]["bloodGroup"] ?? "Unknown",
+              phone: donors[index]["phone"] ?? "",
               onContactPressed: () {},
             ),
           ),
@@ -205,19 +248,14 @@ class DonorCard extends StatelessWidget {
     required this.image,
     required this.bloodGroup,
     required this.onContactPressed,
+    this.phone = "",
   });
 
-  final String name, address, image, bloodGroup;
+  final String name, address, image, bloodGroup, phone;
   final VoidCallback onContactPressed;
 
   @override
   Widget build(BuildContext context) {
-    // final distance = Geolocator.distanceBetween(
-    //   userLocation.latitude,
-    //   userLocation.longitude,
-    //   donor.location.latitude,
-    //   donor.location.longitude,
-    // ) / 1000;
     return InkWell(
       borderRadius: const BorderRadius.all(Radius.circular(8)),
       onTap: onContactPressed,
@@ -226,14 +264,14 @@ class DonorCard extends StatelessWidget {
         child: Container(
           height: 100,
           decoration: BoxDecoration(
-            color: Colors.white, // Light background color
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.2), // Light shadow
+                color: Colors.grey.withOpacity(0.2),
                 blurRadius: 6,
                 spreadRadius: 2,
-                offset: const Offset(2, 4), // Offset to make it look lifted
+                offset: const Offset(2, 4),
               ),
             ],
           ),
@@ -247,6 +285,12 @@ class DonorCard extends StatelessWidget {
                   width: 85,
                   height: 85,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 85,
+                    height: 85,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.person, size: 40),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -269,7 +313,6 @@ class DonorCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    // Text("• ${distance.toStringAsFixed(1)} km away"),
                   ],
                 ),
               ),
@@ -319,25 +362,3 @@ class _DonorMapState extends State<DonorMap> {
     );
   }
 }
-
-// Sample Data
-final List<Map<String, dynamic>> demoData = [
-  {
-    "image": "https://randomuser.me/api/portraits/men/1.jpg",
-    "name": "John Doe",
-    "address": "123 Main St, New York",
-    "bloodGroup": "A+",
-  },
-  {
-    "image": "https://randomuser.me/api/portraits/women/2.jpg",
-    "name": "Jane Smith",
-    "address": "456 Park Ave, Chicago",
-    "bloodGroup": "O-",
-  },
-  {
-    "image": "https://randomuser.me/api/portraits/men/3.jpg",
-    "name": "Mike Johnson",
-    "address": "789 Sunset Blvd, Los Angeles",
-    "bloodGroup": "B+",
-  },
-];

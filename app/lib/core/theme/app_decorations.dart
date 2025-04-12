@@ -7,10 +7,12 @@ class AppDecorations {
     borderRadius: BorderRadius.all(Radius.circular(100)),
   );
 
-  static InputDecoration textFieldDecoration(
-      {required String hintText,
-      required String labelText,
-      required String icon}) {
+  static InputDecoration textFieldDecoration({
+    required String hintText,
+    required String labelText, String? icon, Widget? suffixIcon,
+    // Icon? icon,
+
+  }) {
     return InputDecoration(
       hintText: hintText,
       labelText: labelText,
@@ -21,7 +23,7 @@ class AppDecorations {
         horizontal: 24,
         vertical: 16,
       ),
-      suffix: SvgPicture.string(icon),
+      suffix: SvgPicture.string(icon!),
       border: _authOutlineInputBorder,
       enabledBorder: _authOutlineInputBorder,
       focusedBorder: _authOutlineInputBorder.copyWith(

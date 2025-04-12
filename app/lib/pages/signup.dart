@@ -5,8 +5,9 @@ import 'package:app/pages/testing_profile.dart';
 import 'package:app/services/auth_services.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
-// import 'package:app/core/network/dio_client.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
@@ -48,7 +49,6 @@ class SignupPage extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Color(0xFF757575)),
                   ),
-                  // const SizedBox(height: 16),
                   SizedBox(height: MediaQuery.of(context).size.height * 0.05),
                   const SignUpForm(),
                   SizedBox(height: MediaQuery.of(context).size.height * 0.1),
@@ -76,15 +76,99 @@ class _SignUpFormState extends State<SignUpForm> {
   final formKey = GlobalKey<FormState>();
 
   bool isLoading = false;
+  bool isLocationLoading = false;
+  String locationError = '';
 
   final fullNameController = TextEditingController();
   final phoneNoController = TextEditingController();
   final emailController = TextEditingController();
   final cnicController = TextEditingController();
   final cityController = TextEditingController();
+  final coordinatesController = TextEditingController();
   final dateOfBirthController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
+
+  Future<bool> _handleLocationPermission() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      setState(() {
+        locationError =
+            'Location services are disabled. Please enable the services';
+      });
+      return false;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        setState(() {
+          locationError = 'Location permissions are denied';
+        });
+        return false;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      setState(() {
+        locationError =
+            'Location permissions are permanently denied, we cannot request permissions.';
+      });
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      isLocationLoading = true;
+      locationError = '';
+    });
+
+    final hasPermission = await _handleLocationPermission();
+
+    if (!hasPermission) {
+      setState(() {
+        isLocationLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+
+      final coordinates = "${position.latitude},${position.longitude}";
+      coordinatesController.text = coordinates;
+
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(position.latitude, position.longitude);
+
+      if (placemarks.isNotEmpty) {
+        final place = placemarks[0];
+        final city = place.locality ?? place.subAdministrativeArea ?? '';
+        setState(() {
+          cityController.text = city;
+          isLocationLoading = false;
+        });
+      } else {
+        setState(() {
+          locationError = 'Could not determine your city';
+          isLocationLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        locationError = 'Error getting location: $e';
+        isLocationLoading = false;
+      });
+    }
+  }
 
   Future<void> submitSignUp() async {
     final username = fullNameController.text;
@@ -92,6 +176,7 @@ class _SignUpFormState extends State<SignUpForm> {
     final email = emailController.text;
     final cnic = cnicController.text;
     final city = cityController.text;
+    final coordinates = coordinatesController.text;
     final dateOfBirth = dateOfBirthController.text;
     final password = passwordController.text;
     final confirmPassword = confirmPasswordController.text;
@@ -106,13 +191,13 @@ class _SignUpFormState extends State<SignUpForm> {
         "email": email,
         "cnic": cnic,
         "city": city,
+        "coordinates": coordinates,
         "dob": dateOfBirth,
         "password": password,
         "confirmPassword": confirmPassword,
       });
       print(response);
       if (response.statusCode == 201 && response.data["status"] == 'success') {
-        // Here I want to show a toast message or snackbar and then navigate to the home page
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content:
@@ -133,7 +218,6 @@ class _SignUpFormState extends State<SignUpForm> {
         print("Error: $e");
       }
 
-      // first check if the erros is dio then Show snack bar of the error from the dio api the error should be of the api
       if (e is DioException) {
         print(e.response);
         if (e.response?.statusCode == 400) {
@@ -211,19 +295,76 @@ class _SignUpFormState extends State<SignUpForm> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
-            child: TextFormField(
-              controller: cityController,
-              onSaved: (city) {},
-              onChanged: (city) {},
-              keyboardType: TextInputType.text,
-              decoration: AppDecorations.textFieldDecoration(
-                  hintText: "Enter your city",
-                  labelText: "City",
-                  icon: locationPointIcon),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextFormField(
+                  controller: cityController,
+                  onSaved: (city) {},
+                  onChanged: (city) {},
+                  keyboardType: TextInputType.text,
+                  decoration: AppDecorations.textFieldDecoration(
+                    hintText: "Enter your city",
+                    labelText: "City",
+                    icon: locationPointIcon,
+                    suffixIcon: isLocationLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : IconButton(
+                            icon: const Icon(Icons.my_location,
+                                color: Color(0xFF626262)),
+                            onPressed: _getCurrentLocation,
+                          ),
+                  ),
+                ),
+                Visibility(
+                  visible: false,
+                  child: TextFormField(
+                    controller: coordinatesController,
+                  ),
+                ),
+                if (locationError.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                    child: Text(
+                      locationError,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
+                if (coordinatesController.text.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                    child: Text(
+                      "Location saved: ${coordinatesController.text}",
+                      style: const TextStyle(color: Colors.green, fontSize: 12),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                  child: GestureDetector(
+                    onTap: _getCurrentLocation,
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.refresh, size: 14, color: Color(0xFFE0313B)),
+                        SizedBox(width: 4),
+                        Text(
+                          "Use current location",
+                          style: TextStyle(
+                            color: Color(0xFFE0313B),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-
-          // I want to add a date picker here to take the date of birth
           TextFormField(
             controller: dateOfBirthController,
             readOnly: true,
