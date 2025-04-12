@@ -26,6 +26,7 @@ export class AuthService {
     email: string,
     cnic: string,
     city: string,
+    coordinates: string,
     dob: Date,
     password: string,
     confirmPassword: string,
@@ -55,6 +56,7 @@ export class AuthService {
         email,
         cnic,
         city,
+        coordinates,
         dateOfBirth: dob,
         password
       });

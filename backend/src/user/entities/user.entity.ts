@@ -59,6 +59,9 @@ export class User {
   @Column({nullable: true})
   city: string;
 
+  @Column({nullable: true})
+  coordinates: string;
+
   @OneToMany(() => Listing, (listing) => listing.user)
   listings: Listing[];
 
