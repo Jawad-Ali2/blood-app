@@ -27,7 +27,6 @@ class BloodApp extends StatefulWidget {
 }
 
 class _BloodAppState extends State<BloodApp> {
-
   @override
   void initState() {
     super.initState();

@@ -5,14 +5,20 @@ import 'package:get_it/get_it.dart';
 import 'dart:convert';
 
 class User {
+  final String id;
   final String username;
   final String email;
   final List<String> role;
 
-  User({required this.username, required this.email, required this.role});
+  User(
+      {required this.id,
+      required this.username,
+      required this.email,
+      required this.role});
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
+      id: json['id'],
       username: json['username'],
       email: json['email'],
       role: List<String>.from(json['role']), // Ensure it's a List
@@ -21,6 +27,7 @@ class User {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'username': username,
       'email': email,
       'role': role,

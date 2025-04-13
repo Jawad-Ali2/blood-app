@@ -1,18 +1,46 @@
-import { Body, Controller, Delete, Get, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, BadRequestException } from '@nestjs/common';
 import { ListingService } from './listing.service';
 import { Public } from 'src/common/decorators/public.decorator';
+import { PostListingDTO } from './dto/post-listing.dto';
 
 @Controller('listing')
 export class ListingController {
   constructor(private readonly listingService: ListingService) {
   }
 
-
   @Post()
   async postListing(@Body() body: PostListingDTO) {
+    try {
+      const result = await this.listingService.postListing(body);
+      return { success: true, data: result };
+    } catch (error) {
+      // Forward the error with active listings if that's what we received
+      if (error instanceof BadRequestException) {
+        const response = error.getResponse();
+        if (typeof response === 'object' && 'activeListings' in response) {
+          throw error;
+        }
+      }
+      throw error;
+    }
+  }
 
-    await this.listingService.postListing(body);
-
+  @Post('emergency')
+  async postEmergencyListing(@Body() body: PostListingDTO) {
+    body.isEmergency = true;
+    try {
+      const result = await this.listingService.postListing(body);
+      return { success: true, data: result };
+    } catch (error) {
+      // Forward the error with active listings if that's what we received
+      if (error instanceof BadRequestException) {
+        const response = error.getResponse();
+        if (typeof response === 'object' && 'activeListings' in response) {
+          throw error;
+        }
+      }
+      throw error;
+    }
   }
 
   @Public()
@@ -27,7 +55,11 @@ export class ListingController {
         requiredTill: new Date('2023-12-31'),
         pickAndDrop: true,
         willPay: false,
-        user: { id: 'user1' },
+        hospitalName: 'City Hospital',
+        address: '123 Main St, Lahore',
+        isEmergency: false,
+        notes: 'Need for surgery',
+        user: { id: 'user1', username: 'John Doe' },
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -39,7 +71,11 @@ export class ListingController {
         requiredTill: new Date('2023-12-31'),
         pickAndDrop: false,
         willPay: true,
-        user: { id: 'user2' },
+        hospitalName: 'General Hospital',
+        address: '456 Park Ave, Lahore',
+        isEmergency: true,
+        notes: 'Emergency case',
+        user: { id: 'user2', username: 'Jane Smith' },
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -51,7 +87,11 @@ export class ListingController {
         requiredTill: new Date('2023-12-31'),
         pickAndDrop: false,
         willPay: true,
-        user: { id: 'user2' },
+        hospitalName: 'Central Hospital',
+        address: '789 West St, Lahore',
+        isEmergency: false,
+        notes: 'For scheduled transfusion',
+        user: { id: 'user2', username: 'Jane Smith' },
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -60,17 +100,66 @@ export class ListingController {
     return dummyData;
   }
 
-
   @Get()
   async getAllListings() {
     const listings = await this.listingService.getListings();
-
     return listings;
+  }
+
+  @Get('emergency')
+  async getEmergencyListings() {
+    const listings = await this.listingService.getEmergencyListings();
+    return listings;
+  }
+
+  @Get('user/:userId')
+  async getUserListings(@Param('userId') userId: string) {
+    const listings = await this.listingService.getUserListings(userId);
+    return listings;
+  }
+
+  @Get('count/:userId')
+  async getUserListingsCount(@Param('userId') userId: string) {
+    const count = await this.listingService.getUserListingsCount(userId);
+    return { success: true, count };
+  }
+
+  @Post('status/:id')
+  async updateListingStatus(
+    @Param('id') id: string,
+    @Body('status') status: string,
+  ) {
+    const validStatuses = ['active', 'canceled', 'fulfilled'];
+    if (!validStatuses.includes(status)) {
+      return { 
+        success: false, 
+        message: 'Invalid status. Must be one of: active, canceled, fulfilled' 
+      };
+    }
+    
+    const result = await this.listingService.updateListingStatus(id, status);
+    return { success: true, data: result };
+  }
+
+  @Post('cancel-all/:userId')
+  async cancelAllActiveListings(@Param('userId') userId: string) {
+    await this.listingService.cancelAllActiveListings(userId);
+    return { success: true, message: 'All active listings canceled' };
+  }
+
+  @Post('cancel-oldest/:userId')
+  async cancelOldestListing(@Param('userId') userId: string) {
+    const canceledListing = await this.listingService.cancelOldestListing(userId);
+    if (canceledListing) {
+      return { success: true, data: canceledListing, message: 'Oldest listing canceled' };
+    }
+    return { success: false, message: 'No active listings found to cancel' };
   }
 
   @Delete()
   async deleteListing(@Body('listingId') id) {
     console.log(id);
     await this.listingService.deleteListing(id);
+    return { success: true };
   }
 }

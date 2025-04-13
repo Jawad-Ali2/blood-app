@@ -74,10 +74,14 @@ class SignUpForm extends StatefulWidget {
 class _SignUpFormState extends State<SignUpForm> {
   final DioClient _dioClient = GetIt.instance.get<DioClient>();
   final formKey = GlobalKey<FormState>();
+  final _step1FormKey = GlobalKey<FormState>();
+  final _step2FormKey = GlobalKey<FormState>();
+  final _step3FormKey = GlobalKey<FormState>();
 
   bool isLoading = false;
   bool isLocationLoading = false;
   String locationError = '';
+  int _currentStep = 0;
 
   final fullNameController = TextEditingController();
   final phoneNoController = TextEditingController();
@@ -171,6 +175,10 @@ class _SignUpFormState extends State<SignUpForm> {
   }
 
   Future<void> submitSignUp() async {
+    if (!(_step3FormKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
     final username = fullNameController.text;
     final phone = phoneNoController.text;
     final email = emailController.text;
@@ -242,23 +250,154 @@ class _SignUpFormState extends State<SignUpForm> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Form(
-      key: formKey,
-      child: Column(
+  void _nextStep() {
+    bool isValid = false;
+
+    switch (_currentStep) {
+      case 0:
+        isValid = _step1FormKey.currentState?.validate() ?? false;
+        break;
+      case 1:
+        isValid = _step2FormKey.currentState?.validate() ?? false;
+        break;
+      default:
+        isValid = true;
+        break;
+    }
+
+    if (isValid && _currentStep < 2) {
+      setState(() {
+        _currentStep += 1;
+      });
+    }
+  }
+
+  void _previousStep() {
+    if (_currentStep > 0) {
+      setState(() {
+        _currentStep -= 1;
+      });
+    }
+  }
+
+  Widget _buildStepIndicator() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          _buildStepDot(0),
+          _buildStepLine(0),
+          _buildStepDot(1),
+          _buildStepLine(1),
+          _buildStepDot(2),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepDot(int step) {
+    bool isActive = _currentStep == step;
+    bool isCompleted = _currentStep > step;
+
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        color: isActive || isCompleted
+            ? const Color(0xFFE0313B)
+            : Colors.grey.shade300,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isActive ? const Color(0xFFE0313B) : Colors.transparent,
+          width: 2,
+        ),
+      ),
+      child: isCompleted
+          ? const Icon(Icons.check, color: Colors.white, size: 16)
+          : Center(
+              child: Text(
+                '${step + 1}',
+                style: TextStyle(
+                  color: isActive ? Colors.white : Colors.grey.shade700,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildStepLine(int step) {
+    bool isCompleted = _currentStep > step;
+
+    return Container(
+      width: 50,
+      height: 2,
+      color: isCompleted ? const Color(0xFFE0313B) : Colors.grey.shade300,
+    );
+  }
+
+  Widget _buildStepContent() {
+    switch (_currentStep) {
+      case 0:
+        return _buildBasicInfoStep();
+      case 1:
+        return _buildPersonalDetailsStep();
+      case 2:
+        return _buildSecurityStep();
+      default:
+        return _buildBasicInfoStep();
+    }
+  }
+
+  Widget _buildBasicInfoStep() {
+    return Form(
+      key: _step1FormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 16.0, left: 8.0),
+            child: Text(
+              "Basic Information",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF303030),
+              ),
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: const EdgeInsets.only(bottom: 8),
             child: TextFormField(
               controller: fullNameController,
               onSaved: (username) {},
               onChanged: (username) {},
               textInputAction: TextInputAction.next,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your full name';
+                }
+                if (value.trim().length < 3) {
+                  return 'Name must be at least 3 characters';
+                }
+                return null;
+              },
               decoration: AppDecorations.textFieldDecoration(
                   hintText: "Enter your full name",
                   labelText: "Full Name",
                   icon: userIcon),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(left: 12.0, bottom: 16.0),
+            child: Text(
+              "Make sure to enter name as on your CNIC",
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF757575),
+              ),
             ),
           ),
           TextFormField(
@@ -266,21 +405,83 @@ class _SignUpFormState extends State<SignUpForm> {
             onSaved: (number) {},
             onChanged: (number) {},
             keyboardType: TextInputType.phone,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your phone number';
+              }
+              if (!RegExp(r'^\d{10,12}$').hasMatch(value.trim())) {
+                return 'Enter a valid phone number (10-12 digits)';
+              }
+              return null;
+            },
             decoration: AppDecorations.textFieldDecoration(
                 hintText: "Enter a phone number",
                 labelText: "Phone Number",
                 icon: phoneIcon),
           ),
+          const Padding(
+            padding: EdgeInsets.only(left: 12.0, top: 8.0, bottom: 16.0),
+            child: Text(
+              "Enter a valid phone number to receive SMS notifications",
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF757575),
+              ),
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
+            padding: const EdgeInsets.only(bottom: 8),
             child: TextFormField(
               controller: emailController,
               onSaved: (email) {},
               onChanged: (email) {},
+              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your email';
+                }
+                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                    .hasMatch(value.trim())) {
+                  return 'Please enter a valid email';
+                }
+                return null;
+              },
               decoration: AppDecorations.textFieldDecoration(
                   hintText: "Enter an email",
                   labelText: "Email",
                   icon: emailIcon),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(left: 12.0, bottom: 16.0),
+            child: Text(
+              "We'll use this email for account verification",
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF757575),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPersonalDetailsStep() {
+    return Form(
+      key: _step2FormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 16.0, left: 8.0),
+            child: Text(
+              "Personal Details",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF303030),
+              ),
             ),
           ),
           TextFormField(
@@ -288,10 +489,30 @@ class _SignUpFormState extends State<SignUpForm> {
             onSaved: (cnic) {},
             onChanged: (cnic) {},
             keyboardType: TextInputType.phone,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your CNIC number';
+              }
+              if (!RegExp(r'^\d{5}-\d{7}-\d{1}$').hasMatch(value.trim()) &&
+                  !RegExp(r'^\d{13}$').hasMatch(value.trim())) {
+                return 'Enter valid CNIC (13 digits or format: #####-#######-#)';
+              }
+              return null;
+            },
             decoration: AppDecorations.textFieldDecoration(
                 hintText: "Enter a valid CNIC",
                 labelText: "CNIC number",
                 icon: cardIcon),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(left: 12.0, top: 8.0, bottom: 16.0),
+            child: Text(
+              "Format: 12345-1234567-1 or 1234512345671",
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF757575),
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
@@ -300,11 +521,18 @@ class _SignUpFormState extends State<SignUpForm> {
               children: [
                 TextFormField(
                   controller: cityController,
+                  enabled: false,
+                  readOnly: true,
                   onSaved: (city) {},
                   onChanged: (city) {},
-                  keyboardType: TextInputType.text,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please use "Use Current Location" to set your city';
+                    }
+                    return null;
+                  },
                   decoration: AppDecorations.textFieldDecoration(
-                    hintText: "Enter your city",
+                    hintText: "Use Current Location to set city",
                     labelText: "City",
                     icon: locationPointIcon,
                     suffixIcon: isLocationLoading
@@ -314,7 +542,7 @@ class _SignUpFormState extends State<SignUpForm> {
                             child: CircularProgressIndicator(strokeWidth: 2))
                         : IconButton(
                             icon: const Icon(Icons.my_location,
-                                color: Color(0xFF626262)),
+                                color: Color(0xFFE0313B)),
                             onPressed: _getCurrentLocation,
                           ),
                   ),
@@ -342,23 +570,24 @@ class _SignUpFormState extends State<SignUpForm> {
                     ),
                   ),
                 Padding(
-                  padding: const EdgeInsets.only(top: 8.0, left: 12.0),
-                  child: GestureDetector(
-                    onTap: _getCurrentLocation,
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.refresh, size: 14, color: Color(0xFFE0313B)),
-                        SizedBox(width: 4),
-                        Text(
-                          "Use current location",
-                          style: TextStyle(
-                            color: Color(0xFFE0313B),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: ElevatedButton.icon(
+                    onPressed: _getCurrentLocation,
+                    icon: const Icon(Icons.my_location, size: 18),
+                    label: Text(
+                      cityController.text.isEmpty
+                          ? "Use Current Location"
+                          : "Update Location",
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      backgroundColor: const Color(0xFFE0313B),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
@@ -368,12 +597,26 @@ class _SignUpFormState extends State<SignUpForm> {
           TextFormField(
             controller: dateOfBirthController,
             readOnly: true,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please select your date of birth';
+              }
+              return null;
+            },
             onTap: () async {
+              // Calculate date 18 years ago from today
+              final DateTime eighteenYearsAgo =
+                  DateTime.now().subtract(const Duration(days: 365 * 18));
+
               DateTime? pickedDate = await showDatePicker(
                 context: context,
-                initialDate: DateTime.now(),
+                initialDate: eighteenYearsAgo,
                 firstDate: DateTime(1900),
-                lastDate: DateTime.now(),
+                lastDate: eighteenYearsAgo, // Set maximum date to 18 years ago
+                selectableDayPredicate: (DateTime date) {
+                  // Only allow dates on or before 18 years ago
+                  return date.compareTo(eighteenYearsAgo) <= 0;
+                },
               );
               if (pickedDate != null) {
                 setState(() {
@@ -388,45 +631,242 @@ class _SignUpFormState extends State<SignUpForm> {
               icon: locationPointIcon,
             ),
           ),
+          const Padding(
+            padding: EdgeInsets.only(left: 12.0, top: 8.0),
+            child: Text(
+              "You must be at least 18 years old to register as a donor",
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF757575),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSecurityStep() {
+    bool termsAccepted = false;
+
+    return Form(
+      key: _step3FormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 16.0, left: 8.0),
+            child: Text(
+              "Security",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF303030),
+              ),
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
+            padding: const EdgeInsets.only(bottom: 8),
             child: TextFormField(
               controller: passwordController,
+              obscureText: true,
               onSaved: (password) {},
               onChanged: (password) {},
-              keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a password';
+                }
+                if (value.length < 6) {
+                  return 'Password must be at least 6 characters';
+                }
+                return null;
+              },
               decoration: AppDecorations.textFieldDecoration(
                   hintText: "Create a password",
                   labelText: "Password",
                   icon: passwordIcon),
             ),
           ),
+          const Padding(
+            padding: EdgeInsets.only(left: 12.0, bottom: 16.0),
+            child: Text(
+              "Use a strong password with letters, numbers and symbols",
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF757575),
+              ),
+            ),
+          ),
           TextFormField(
             controller: confirmPasswordController,
+            obscureText: true,
             onSaved: (confirmPassword) {},
             onChanged: (confirmPassword) {},
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please confirm your password';
+              }
+              if (value != passwordController.text) {
+                return 'Passwords do not match';
+              }
+              return null;
+            },
             decoration: AppDecorations.textFieldDecoration(
                 hintText: "Re-enter your password",
                 labelText: "Confirm Password",
                 icon: passwordIcon),
           ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {
-              submitSignUp();
+
+          const SizedBox(height: 32),
+
+          // Terms and Conditions Checkbox
+          FormField<bool>(
+            initialValue: false,
+            validator: (value) {
+              if (value != true) {
+                return 'You must accept the terms to continue';
+              }
+              return null;
             },
+            builder: (FormFieldState<bool> field) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Checkbox(
+                        value: field.value,
+                        activeColor: const Color(0xFFE0313B),
+                        onChanged: (value) {
+                          field.didChange(value);
+                        },
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 12.0),
+                          child: RichText(
+                            text: const TextSpan(
+                              style: TextStyle(
+                                color: Color(0xFF303030),
+                                fontSize: 14,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: 'I agree to the ',
+                                ),
+                                TextSpan(
+                                  text: 'Terms of Service',
+                                  style: TextStyle(
+                                    color: Color(0xFFE0313B),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: ' and ',
+                                ),
+                                TextSpan(
+                                  text: 'Privacy Policy',
+                                  style: TextStyle(
+                                    color: Color(0xFFE0313B),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (field.hasError)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12.0, top: 8.0),
+                      child: Text(
+                        field.errorText!,
+                        style: const TextStyle(
+                          color: Color(0xFFE0313B),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  const Padding(
+                    padding: EdgeInsets.only(left: 12.0, top: 8.0, right: 12.0),
+                    child: Text(
+                      "By accepting, you allow us to access your location to find nearby donors and donation requests. Your information will only be shared with verified users.",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF757575),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavigationButtons() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 32.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _currentStep > 0
+              ? ElevatedButton(
+                  onPressed: _previousStep,
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFFE0313B),
+                    side: const BorderSide(color: Color(0xFFE0313B)),
+                    minimumSize: const Size(120, 48),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(16)),
+                    ),
+                  ),
+                  child: const Text("Previous"),
+                )
+              : const SizedBox(width: 120),
+          ElevatedButton(
+            onPressed: _currentStep < 2 ? _nextStep : submitSignUp,
             style: ElevatedButton.styleFrom(
               elevation: 0,
               backgroundColor: const Color(0xFFE0313B),
               foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 48),
+              minimumSize: const Size(120, 48),
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.all(Radius.circular(16)),
               ),
             ),
-            child:
-                isLoading ? CircularProgressIndicator() : const Text("Submit"),
-          )
+            child: isLoading && _currentStep == 2
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(_currentStep < 2 ? "Next" : "Submit"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: formKey,
+      child: Column(
+        children: [
+          _buildStepIndicator(),
+          _buildStepContent(),
+          _buildNavigationButtons(),
         ],
       ),
     );

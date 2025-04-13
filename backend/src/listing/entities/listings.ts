@@ -1,8 +1,6 @@
 import { User } from "src/user/entities/user.entity";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 
-
-
 @Entity()
 export class Listing {
     @PrimaryGeneratedColumn('uuid')
@@ -10,9 +8,6 @@ export class Listing {
 
     @Column()
     groupRequired: string;
-
-    // @Column()
-    // proofMedia: string;
 
     @Column()
     bagsRequired: number;
@@ -26,18 +21,33 @@ export class Listing {
     @Column({ nullable: true })
     willPay: boolean;
 
-    // I want location with latitude and longitude
-    @Column({ type: 'jsonb', nullable: true })
-    location: { latitude: number; longitude: number };
+    // Hospital or medical facility name
+    @Column({ nullable: true })
+    hospitalName: string;
+
+    // Address in text format for readability
+    @Column({ nullable: true })
+    address: string;
+
+    // For emergency cases
+    @Column({ default: false })
+    isEmergency: boolean;
+
+    // Notes or special instructions (can include purpose and other details)
+    @Column({ type: 'text', nullable: true })
+    notes: string;
+
+    // Status field for tracking listing state
+    @Column({ default: 'active' })
+    status: string;
 
     // Will contain UserId
     @ManyToOne(() => User, (user) => user.listings)
     @JoinColumn({ name: "userId" })
-    user: User
+    user: User;
 
     @CreateDateColumn({ type: 'timestamp' })
     createdAt: Date;
-
 
     @CreateDateColumn({ type: 'timestamp' })
     updatedAt: Date;

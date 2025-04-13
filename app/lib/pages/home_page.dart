@@ -1,6 +1,8 @@
 import 'package:app/core/enums/app_routes.dart';
 import 'package:app/core/storage/secure_storage.dart';
 import 'package:app/services/auth_services.dart';
+import 'package:app/services/listing_service.dart';
+import 'package:app/widgets/create_request_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get_it/get_it.dart';
@@ -73,10 +75,106 @@ class HomePage extends StatelessWidget {
           children: [
             HomeHeader(),
             Banner(),
-            FindDonorsButton(screenWidth: screenWidth),
-            const SizedBox(height: 12),
+
+            // Quick Actions Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Quick Actions",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child:
+                            FindDonorsButton(screenWidth: screenWidth / 2 - 24),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: CreateRequestButton(
+                            screenWidth: screenWidth / 2 - 24),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Emergency Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: EmergencyRequestCard(),
+            ),
+
+            // My Requests Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "My Blood Requests",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // Navigate to all requests
+                          context.push('/user-listings');
+                        },
+                        child: Text(
+                          "View All",
+                          style: TextStyle(
+                            color: Colors.red[600],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  MyRequestsList(),
+                ],
+              ),
+            ),
+
             StatsBar(),
             const SizedBox(height: 12),
+
+            // Nearby Donors Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Nearby Donors",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  // NearbyDonorsMap(),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 60), // Space for FAB
           ],
         ),
       ),
@@ -84,7 +182,31 @@ class HomePage extends StatelessWidget {
       // FLOATING BUTTON
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.red,
-        onPressed: () {},
+        onPressed: () {
+          // Show dialog to create new request with proper handling
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return CreateRequestDialog(
+                onRequestCreated: (dynamic result) {
+                  // Handle the result of creating a request
+                  if (result is Map &&
+                      result['action'] == 'navigate_to_listings') {
+                    Navigator.of(context).pop();
+                    context.push('/user-listings');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content:
+                            Text("Please manage your existing listings first"),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+              );
+            },
+          );
+        },
         shape: CircleBorder(),
         child: const Icon(
           Icons.add,
@@ -125,6 +247,7 @@ class HomePage extends StatelessWidget {
   }
 }
 
+// Existing buttons
 class FindDonorsButton extends StatelessWidget {
   const FindDonorsButton({super.key, required this.screenWidth});
 
@@ -132,26 +255,298 @@ class FindDonorsButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          minimumSize: Size(screenWidth, 50),
-          backgroundColor: Colors.red[600],
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            side: BorderSide(color: Colors.black, width: 0.1),
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-        ),
-        onPressed: () {
-          context.push(AppRoutes.donors.path);
-        },
-        child: const Text(
-          "Find Donors",
-          style: TextStyle(fontSize: 18),
+    return ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        minimumSize: Size(screenWidth, 50),
+        backgroundColor: Colors.red[600],
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: Colors.black, width: 0.1),
+          borderRadius: BorderRadius.circular(12.0),
         ),
       ),
+      onPressed: () {
+        context.push(AppRoutes.donors.path);
+      },
+      icon: Icon(Icons.search),
+      label: const Text(
+        "Find Donors",
+        style: TextStyle(fontSize: 16),
+      ),
+    );
+  }
+}
+
+// New button for creating blood requests
+class CreateRequestButton extends StatelessWidget {
+  const CreateRequestButton({super.key, required this.screenWidth});
+
+  final double screenWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        minimumSize: Size(screenWidth, 50),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.red[600],
+        side: BorderSide(color: Colors.red.shade600, width: 1),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+      ),
+      onPressed: () {
+        // Navigate to create request page or show dialog
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return CreateRequestDialog(
+              onRequestCreated: (dynamic result) {
+                // Handle the result same as in UserListingsPage
+                if (result is Map &&
+                    result['action'] == 'navigate_to_listings') {
+                  Navigator.of(context).pop();
+                  context.push('/user-listings');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content:
+                          Text("Please manage your existing listings first"),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+            );
+          },
+        );
+      },
+      icon: Icon(Icons.add_circle_outline),
+      label: const Text(
+        "New Request",
+        style: TextStyle(fontSize: 16),
+      ),
+    );
+  }
+}
+
+// Emergency Request Card
+class EmergencyRequestCard extends StatelessWidget {
+  const EmergencyRequestCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.red.shade200, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.emergency, color: Colors.red, size: 24),
+                SizedBox(width: 8),
+                Text(
+                  "Emergency Request",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red[800],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Text(
+              "Need blood urgently? Create an emergency request that will be prioritized and shown to nearby donors immediately.",
+              style: TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+            SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () {
+                // Show dialog with emergency checkbox checked
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return CreateRequestDialog(
+                      isEmergencyChecked: true, // Pre-check emergency option
+                      onRequestCreated: (dynamic result) {
+                        // Handle the result same as in UserListingsPage
+                        if (result is Map &&
+                            result['action'] == 'navigate_to_listings') {
+                          Navigator.of(context).pop();
+                          context.push('/user-listings');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  "Please manage your existing listings first"),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                    );
+                  },
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[800],
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text("Create Emergency Request"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Update MyRequestsList to fetch and display actual data with priority sorting
+class MyRequestsList extends StatelessWidget {
+  const MyRequestsList({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final listingService = ListingService();
+    final _storage = GetIt.instance.get<SecureStorage>();
+
+    return FutureBuilder<User?>(
+      future: _storage.getUser(),
+      builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (!userSnapshot.hasData || userSnapshot.data == null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                "Please log in to view your requests",
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          );
+        }
+
+        return FutureBuilder<List<Listing>>(
+          // For testing use getDummyListings instead of actual API
+          // future: listingService.getDummyListings(),
+          future: listingService.getListings(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  "Error: ${snapshot.error}",
+                  style: TextStyle(color: Colors.red),
+                ),
+              );
+            }
+
+            final listings = snapshot.data ?? [];
+
+            if (listings.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    "You haven't created any requests yet",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              );
+            }
+
+            // Sort listings by priority (emergency first)
+            final sortedListings = [...listings]..sort((a, b) {
+                // Emergency requests first
+                if (a.isEmergency && !b.isEmergency) return -1;
+                if (!a.isEmergency && b.isEmergency) return 1;
+                // Then sort by creation date (newest first)
+                return b.createdAt.compareTo(a.createdAt);
+              });
+
+            return ListView.builder(
+              physics: NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              itemCount: sortedListings.length > 2
+                  ? 2
+                  : sortedListings.length, // Show only 2 items in home
+              itemBuilder: (context, index) {
+                final listing = sortedListings[index];
+                final bool isEmergency =
+                    listing.isEmergency && listing.status == 'active';
+
+                return Card(
+                  margin: EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    side: isEmergency
+                        ? BorderSide(color: Colors.red.shade600, width: 1.5)
+                        : BorderSide.none,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    contentPadding: EdgeInsets.all(12),
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          isEmergency ? Colors.red[100] : Colors.blue[100],
+                      child: Text(
+                        listing.groupRequired,
+                        style: TextStyle(
+                          color:
+                              isEmergency ? Colors.red[700] : Colors.blue[700],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "${listing.bagsRequired} units needed at ${listing.hospitalName ?? 'Not specified'}",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        if (isEmergency)
+                          Icon(Icons.priority_high,
+                              color: Colors.red[600], size: 18),
+                      ],
+                    ),
+                    subtitle: Text(
+                        "Created on: ${listing.createdAt.toLocal().toString().split(' ')[0]}"),
+                    trailing: Chip(
+                      label: Text(
+                        isEmergency ? "Emergency" : "Active",
+                        style: TextStyle(
+                          color: isEmergency ? Colors.white : Colors.blue[700],
+                          fontSize: 12,
+                        ),
+                      ),
+                      backgroundColor:
+                          isEmergency ? Colors.red[600] : Colors.blue[100],
+                    ),
+                    onTap: () {
+                      // Navigate to request details
+                    },
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -171,7 +566,6 @@ class HomeHeader extends StatelessWidget {
           const Expanded(child: SearchField()),
           const SizedBox(width: 16),
           IconBtnWithCounter(
-            // numOfItem: 1,
             svgSrc: filterIcon,
             press: () {},
           ),

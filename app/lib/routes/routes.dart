@@ -1,4 +1,5 @@
 import 'package:app/pages/testing_profile.dart';
+import 'package:app/pages/user_listings_page.dart';
 import 'package:app/pages/user_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:app/pages/donors_page.dart';
@@ -24,5 +25,6 @@ Map<String, WidgetBuilder> routes = {
   // "edit-profile": (context) => EditProfileScreen(),
   "settings": (context) => SettingsScreen(),
   "donors": (context) => DonorsPage(),
+  "user-listing": (context) => UserListingsPage(),
   // "requests": (context) => RequestsPage(),
 };

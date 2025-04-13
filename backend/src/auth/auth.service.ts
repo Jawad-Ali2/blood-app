@@ -103,7 +103,7 @@ export class AuthService {
     await this.userRepository.save(user);
 
     const modifiedUser = {
-      userId: user.id,
+      id: user.id,
       username: user.username,
       email: user.email,
       role: user.role,
