@@ -1,10 +1,8 @@
 import {
   BeforeInsert,
-  BeforeUpdate,
   Column,
   Entity,
   OneToMany,
-  PrimaryColumn,
   PrimaryGeneratedColumn,
   Timestamp,
 } from 'typeorm';
@@ -40,7 +38,6 @@ export class User {
   @Column({nullable: true})
   phone: string;
 
-  // Instead of number age I want to store date of birth
   @Column({type: 'date', nullable: true})
   dateOfBirth: Date;
 
