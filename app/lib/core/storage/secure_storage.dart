@@ -75,6 +75,31 @@ class SecureStorage {
     return null;
   }
 
+  Future<String> getCurrentUserId() async {
+    try {
+      String? userData = await _storage.read(key: _userKey);
+      if (userData != null) {
+        return User.fromJson(jsonDecode(userData)).id;
+      }
+    } catch (e) {
+      print("Error retrieving token: $e");
+      return "";
+    }
+    return "";
+  }
+
+  Future<String> getUserBloodGroup() async {
+    try {
+      String? userData = await _storage.read(key: _userKey);
+      if (userData != null) {
+        return User.fromJson(jsonDecode(userData)).bloodGroup ?? "";
+      }
+    } catch (e) {
+      print("Error retrieving token: $e");
+    }
+    return "";
+  }
+
   Future<void> saveUser(User user) async {
     await _storage.write(key: _userKey, value: jsonEncode(user.toJson()));
   }

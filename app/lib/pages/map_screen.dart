@@ -67,6 +67,7 @@ class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   final _dioClient = GetIt.instance.get<DioClient>();
   bool isLoading = true;
+  bool _mapInitialized = false;
 
   @override
   void initState() {
@@ -74,10 +75,23 @@ class _MapScreenState extends State<MapScreen> {
     loadLocationAndData();
   }
 
+  @override
+  void dispose() {
+    // Clean up resources here if needed
+    super.dispose();
+  }
+
   Future<void> loadLocationAndData() async {
     try {
-      Position position = await LocationService.getCurrentLocation();
-      userLocation = LatLng(position.latitude, position.longitude);
+      // Use the static method that returns Position directly
+      Position position = await LocationService.getCurrentPosition();
+
+      // Check if widget is still mounted before updating state
+      if (!mounted) return;
+
+      setState(() {
+        userLocation = LatLng(position.latitude, position.longitude);
+      });
 
       // Fetch donors from API
       final response =
@@ -87,11 +101,13 @@ class _MapScreenState extends State<MapScreen> {
         "radius": "10" // 10km radius
       });
 
+      // Check if widget is still mounted before updating state
+      if (!mounted) return;
+
       List apiDonors = response.data['data'] ?? [];
 
       // Convert API donors to Donor model objects
       donors = apiDonors.map((donor) {
-        // Parse coordinates string "lat,lng" to LatLng object
         List<String> coords = donor['coordinates'].split(',');
         double lat = double.parse(coords[0]);
         double lng = double.parse(coords[1]);
@@ -103,20 +119,38 @@ class _MapScreenState extends State<MapScreen> {
             contact: donor['phone'] ?? 'N/A');
       }).toList();
 
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     } catch (e) {
       print("Error: $e");
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
   void _goToUserLocation() {
+    if (userLocation != null && _mapInitialized) {
+      try {
+        _mapController.move(userLocation!, 13.0);
+      } catch (e) {
+        print("Error moving map: $e");
+      }
+    }
+  }
+
+  void _onMapCreated(MapController controller) {
+    // Map is now initialized
+    _mapInitialized = true;
+
+    // Now it's safe to move the map to user location
     if (userLocation != null) {
-      _mapController.move(userLocation!, 13.0);
+      _goToUserLocation();
     }
   }
 
@@ -131,6 +165,13 @@ class _MapScreenState extends State<MapScreen> {
         children: [
           FlutterMap(
             mapController: _mapController,
+            options: MapOptions(
+              onMapReady: () {
+                _onMapCreated(_mapController);
+              },
+              initialCenter: userLocation!,
+              initialZoom: 13.0,
+            ),
             children: [
               TileLayer(
                 urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",

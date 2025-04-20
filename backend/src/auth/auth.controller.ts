@@ -22,6 +22,9 @@ export class AuthController {
     @Body('dob') dob: Date,
     @Body('password') password: string,
     @Body('confirmPassword') confirmPassword: string,
+    @Body('isDonor') isDonor: boolean,
+    @Body('bloodGroup') bloodGroup : string,
+    // Accept certificate file here
     @Res() res: Response,
   ) {
     // Cnic should be 13 charaters long
@@ -35,6 +38,8 @@ export class AuthController {
       city,
       coordinates,
       dateOfBirth,
+      isDonor,
+      bloodGroup,
       password,
       confirmPassword,
     );
@@ -78,19 +83,14 @@ export class AuthController {
     });
   }
 
-  @Public()
-  @Post('guest-login')
-  async guestLogin(@Res() res: Response) {
-    const accessToken = await this.authService.guestSignIn();
-
-    // Todo: Add options for the cookie
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+  @Post('logout')
+  async logout(@Res() res: Response) {
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+    return res.status(200).json({
+      status: 'success',
+      message: 'User logged out successfully.',
     });
-
-    return;
   }
 
   @Public()
@@ -129,7 +129,7 @@ export class AuthController {
   }
 
   @Get('receiver')
-  @Roles(Role.RECIEVER)
+  @Roles(Role.RECIPIENT)
   getReceiverDashboard() {
     // TODO: We will add form for reciever to request blood
     return 'Receiver Dashboard';

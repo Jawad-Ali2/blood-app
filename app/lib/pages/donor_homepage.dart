@@ -1,17 +1,18 @@
 import 'package:app/core/enums/app_routes.dart';
 import 'package:app/core/storage/secure_storage.dart';
+import 'package:app/pages/signin.dart';
 import 'package:app/services/auth_services.dart';
-import 'package:app/services/listing_service.dart';
+// import 'package:app/services/donation_service.dart';
 import 'package:app/widgets/app_bar.dart';
-import 'package:app/widgets/create_request_dialog.dart';
 import 'package:app/widgets/nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-class HomePage extends StatelessWidget {
-  HomePage({super.key});
+class DonorHomePage extends StatelessWidget {
+  DonorHomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +29,7 @@ class HomePage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             HomeHeader(),
-            Banner(),
+            DonorBanner(),
 
             // Quick Actions Section
             Padding(
@@ -48,12 +49,12 @@ class HomePage extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child:
-                            FindDonorsButton(screenWidth: screenWidth / 2 - 24),
+                        child: ViewRequestsButton(
+                            screenWidth: screenWidth / 2 - 24),
                       ),
                       SizedBox(width: 12),
                       Expanded(
-                        child: CreateRequestButton(
+                        child: UpdateStatusButton(
                             screenWidth: screenWidth / 2 - 24),
                       ),
                     ],
@@ -62,13 +63,13 @@ class HomePage extends StatelessWidget {
               ),
             ),
 
-            // Emergency Section
+            // Nearby Requests Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: EmergencyRequestCard(),
+              child: NearbyRequestsCard(),
             ),
 
-            // My Requests Section
+            // Active Donations Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Column(
@@ -78,7 +79,44 @@ class HomePage extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "My Blood Requests",
+                        "Active Donation",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      // TextButton(
+                      //   onPressed: () {
+                      //     // Navigate to all active donations
+                      //     context.push('/active-donations');
+                      //   },
+                      //   child: Text(
+                      //     "View All",
+                      //     style: TextStyle(
+                      //       color: Colors.red[600],
+                      //       fontWeight: FontWeight.w600,
+                      //     ),
+                      //   ),
+                      // ),
+                    ],
+                  ),
+                  ActiveDonationsList(),
+                ],
+              ),
+            ),
+
+            // My Donations Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "My Donations",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -87,8 +125,8 @@ class HomePage extends StatelessWidget {
                       ),
                       TextButton(
                         onPressed: () {
-                          // Navigate to all requests
-                          context.push('/user-listings');
+                          // Navigate to all donations
+                          context.push('/donor-history');
                         },
                         child: Text(
                           "View All",
@@ -100,32 +138,18 @@ class HomePage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  MyRequestsList(),
+                  MyDonationsList(),
                 ],
               ),
             ),
 
-            StatsBar(),
+            DonorStatsBar(),
             const SizedBox(height: 12),
 
-            // Nearby Donors Section
+            // Donation Tips Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Nearby Donors",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  // NearbyDonorsMap(),
-                ],
-              ),
+              child: DonationTipsCard(),
             ),
 
             SizedBox(height: 60), // Space for FAB
@@ -144,9 +168,9 @@ class HomePage extends StatelessWidget {
   }
 }
 
-// Existing buttons
-class FindDonorsButton extends StatelessWidget {
-  const FindDonorsButton({super.key, required this.screenWidth});
+// Donor-specific buttons
+class ViewRequestsButton extends StatelessWidget {
+  const ViewRequestsButton({super.key, required this.screenWidth});
 
   final double screenWidth;
 
@@ -163,20 +187,19 @@ class FindDonorsButton extends StatelessWidget {
         ),
       ),
       onPressed: () {
-        context.push(AppRoutes.donors.path);
+        context.push(AppRoutes.bloodRequests.path);
       },
-      icon: Icon(Icons.search),
+      icon: Icon(Icons.bloodtype),
       label: const Text(
-        "Find Donors",
+        "View Requests",
         style: TextStyle(fontSize: 16),
       ),
     );
   }
 }
 
-// New button for creating blood requests
-class CreateRequestButton extends StatelessWidget {
-  const CreateRequestButton({super.key, required this.screenWidth});
+class UpdateStatusButton extends StatelessWidget {
+  const UpdateStatusButton({super.key, required this.screenWidth});
 
   final double screenWidth;
 
@@ -193,42 +216,21 @@ class CreateRequestButton extends StatelessWidget {
         ),
       ),
       onPressed: () {
-        // Navigate to create request page or show dialog
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return CreateRequestDialog(
-              onRequestCreated: (dynamic result) {
-                // Handle the result same as in UserListingsPage
-                if (result is Map &&
-                    result['action'] == 'navigate_to_listings') {
-                  Navigator.of(context).pop();
-                  context.push('/user-listings');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content:
-                          Text("Please manage your existing listings first"),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                }
-              },
-            );
-          },
-        );
+        // Navigate to update availability status
+        context.push('/donor-profile');
       },
-      icon: Icon(Icons.add_circle_outline),
+      icon: Icon(Icons.update),
       label: const Text(
-        "New Request",
+        "Update Status",
         style: TextStyle(fontSize: 16),
       ),
     );
   }
 }
 
-// Emergency Request Card
-class EmergencyRequestCard extends StatelessWidget {
-  const EmergencyRequestCard({super.key});
+// Nearby Requests Card
+class NearbyRequestsCard extends StatelessWidget {
+  const NearbyRequestsCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -245,10 +247,10 @@ class EmergencyRequestCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.emergency, color: Colors.red, size: 24),
+                Icon(Icons.location_on, color: Colors.red, size: 24),
                 SizedBox(width: 8),
                 Text(
-                  "Emergency Request",
+                  "Nearby Blood Requests",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -259,36 +261,14 @@ class EmergencyRequestCard extends StatelessWidget {
             ),
             SizedBox(height: 12),
             Text(
-              "Need blood urgently? Create an emergency request that will be prioritized and shown to nearby donors immediately.",
+              "There are 3 blood requests within 5km of your location. Your blood type is needed!",
               style: TextStyle(fontSize: 14, color: Colors.black87),
             ),
             SizedBox(height: 12),
             ElevatedButton(
               onPressed: () {
-                // Show dialog with emergency checkbox checked
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return CreateRequestDialog(
-                      isEmergencyChecked: true, // Pre-check emergency option
-                      onRequestCreated: (dynamic result) {
-                        // Handle the result same as in UserListingsPage
-                        if (result is Map &&
-                            result['action'] == 'navigate_to_listings') {
-                          Navigator.of(context).pop();
-                          context.push('/user-listings');
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  "Please manage your existing listings first"),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      },
-                    );
-                  },
-                );
+                // Navigate to nearby requests map
+                context.push('/nearby-requests');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red[800],
@@ -297,7 +277,7 @@ class EmergencyRequestCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: Text("Create Emergency Request"),
+              child: Text("View Nearby Requests"),
             ),
           ],
         ),
@@ -306,13 +286,13 @@ class EmergencyRequestCard extends StatelessWidget {
   }
 }
 
-// Update MyRequestsList to fetch and display actual data with priority sorting
-class MyRequestsList extends StatelessWidget {
-  const MyRequestsList({super.key});
+// Update MyDonationsList to display donation history
+class MyDonationsList extends StatelessWidget {
+  const MyDonationsList({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final listingService = ListingService();
+    final donationService = DonationService();
     final _storage = GetIt.instance.get<SecureStorage>();
 
     return FutureBuilder<User?>(
@@ -327,19 +307,19 @@ class MyRequestsList extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                "Please log in to view your requests",
+                "Please log in to view your donation history",
                 style: TextStyle(color: Colors.grey),
               ),
             ),
           );
         }
 
-        // Get the current user ID and ensure we're fetching only their listings
+        // Get the current user ID
         final userId = userSnapshot.data!.id;
 
-        return FutureBuilder<List<Listing>>(
-          // Fetch only listings that belong to the current user
-          future: listingService.getUserListings(userId),
+        return FutureBuilder<List<Donation>>(
+          // Fetch only donations made by the current user
+          future: donationService.getUserDonations(userId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Center(child: CircularProgressIndicator());
@@ -354,94 +334,199 @@ class MyRequestsList extends StatelessWidget {
               );
             }
 
-            final listings = snapshot.data ?? [];
+            final donations = snapshot.data ?? [];
 
-            // Filter to only show active listings
-            final activeListings = listings
-                .where((listing) => listing.status.toLowerCase() == 'active')
-                .toList();
-
-            if (activeListings.isEmpty) {
+            if (donations.isEmpty) {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
-                    "You don't have any active requests",
+                    "You haven't made any donations yet",
                     style: TextStyle(color: Colors.grey),
                   ),
                 ),
               );
             }
 
-            // Apply the sorting rules: emergency first, then by creation date
-            final sortedListings = [...activeListings]..sort((a, b) {
-                // Emergency requests first
-                if (a.isEmergency && !b.isEmergency) return -1;
-                if (!a.isEmergency && b.isEmergency) return 1;
-                // Then sort by creation date (newest first)
-                return b.createdAt.compareTo(a.createdAt);
-              });
+            // Sort by donation date (newest first)
+            final sortedDonations = [...donations]
+              ..sort((a, b) => b.donationDate.compareTo(a.donationDate));
 
-            // Limit to showing only the 2 most important listings on the home page
+            // Limit to showing only the 2 most recent donations
             return ListView.builder(
               physics: NeverScrollableScrollPhysics(),
               shrinkWrap: true,
-              itemCount: sortedListings.length > 2 ? 2 : sortedListings.length,
+              itemCount:
+                  sortedDonations.length > 2 ? 2 : sortedDonations.length,
               itemBuilder: (context, index) {
-                final listing = sortedListings[index];
-                final bool isEmergency =
-                    listing.isEmergency && listing.status == 'active';
+                final donation = sortedDonations[index];
 
                 return Card(
                   margin: EdgeInsets.symmetric(vertical: 8),
                   shape: RoundedRectangleBorder(
-                    side: isEmergency
-                        ? BorderSide(color: Colors.red.shade600, width: 1.5)
-                        : BorderSide.none,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: ListTile(
                     contentPadding: EdgeInsets.all(12),
                     leading: CircleAvatar(
-                      backgroundColor:
-                          isEmergency ? Colors.red[100] : Colors.blue[100],
+                      backgroundColor: Colors.red[100],
                       child: Text(
-                        listing.groupRequired,
+                        donation.bloodType,
                         style: TextStyle(
-                          color:
-                              isEmergency ? Colors.red[700] : Colors.blue[700],
+                          color: Colors.red[700],
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                    title: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            "${listing.bagsRequired} units needed at ${listing.hospitalName ?? 'Not specified'}",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        if (isEmergency)
-                          Icon(Icons.priority_high,
-                              color: Colors.red[600], size: 18),
-                      ],
+                    title: Text(
+                      "Donation at ${donation.hospitalName}",
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
-                        "Created on: ${listing.createdAt.toLocal().toString().split(' ')[0]}"),
+                        "Date: ${donation.donationDate.toLocal().toString().split(' ')[0]}"),
                     trailing: Chip(
                       label: Text(
-                        isEmergency ? "Emergency" : "Active",
+                        "${donation.units} units",
                         style: TextStyle(
-                          color: isEmergency ? Colors.white : Colors.blue[700],
+                          color: Colors.white,
                           fontSize: 12,
                         ),
                       ),
-                      backgroundColor:
-                          isEmergency ? Colors.red[600] : Colors.blue[100],
+                      backgroundColor: Colors.green[600],
                     ),
                     onTap: () {
-                      // Navigate to request details
+                      // Navigate to donation details
+                      context.push('/donation-details/${donation.id}');
+                    },
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// Active Donations List
+class ActiveDonationsList extends StatelessWidget {
+  const ActiveDonationsList({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final donationService = DonationService();
+    final _storage = GetIt.instance.get<SecureStorage>();
+
+    return FutureBuilder<User?>(
+      future: _storage.getUser(),
+      builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (!userSnapshot.hasData || userSnapshot.data == null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                "Please log in to view your active donations",
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          );
+        }
+
+        // Get the current user ID
+        final userId = userSnapshot.data!.id;
+
+        return FutureBuilder<List<ActiveDonation>>(
+          // Fetch active donations for the current user
+          future: donationService.getActiveUserDonations(userId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  "Error: ${snapshot.error}",
+                  style: TextStyle(color: Colors.red),
+                ),
+              );
+            }
+
+            final activeDonations = snapshot.data ?? [];
+
+            if (activeDonations.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    "You don't have any active donation commitments",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              );
+            }
+
+            // Show active donations
+            return ListView.builder(
+              physics: NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              itemCount:
+                  activeDonations.length > 2 ? 2 : activeDonations.length,
+              itemBuilder: (context, index) {
+                final donation = activeDonations[index];
+
+                return Card(
+                  margin: EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.orange.shade300, width: 1),
+                  ),
+                  child: ListTile(
+                    contentPadding: EdgeInsets.all(12),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.orange[100],
+                      child: Text(
+                        donation.bloodType,
+                        style: TextStyle(
+                          color: Colors.orange[700],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      donation.patientName,
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("At ${donation.hospitalName}"),
+                        Text(
+                            "Appointment: ${donation.appointmentDate.toLocal().toString().split(' ')[0]}"),
+                      ],
+                    ),
+                    trailing: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        "Pending",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    onTap: () {
+                      // Navigate to active donation details
+                      context.push('/active-donation/${donation.id}');
                     },
                   ),
                 );
@@ -455,9 +540,7 @@ class MyRequestsList extends StatelessWidget {
 }
 
 class HomeHeader extends StatelessWidget {
-  const HomeHeader({
-    super.key,
-  });
+  const HomeHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -475,7 +558,7 @@ class HomeHeader extends StatelessWidget {
           const SizedBox(width: 8),
           IconBtnWithCounter(
             svgSrc: bellIcon,
-            numOfItem: 3,
+            numOfItem: 2,
             press: () {},
           ),
         ],
@@ -510,7 +593,7 @@ class SearchField extends StatelessWidget {
             borderRadius: BorderRadius.all(Radius.circular(12)),
             borderSide: BorderSide.none,
           ),
-          hintText: "Search donors",
+          hintText: "Search blood requests",
           prefixIcon: const Icon(Icons.search),
         ),
       ),
@@ -579,16 +662,14 @@ class IconBtnWithCounter extends StatelessWidget {
   }
 }
 
-class Banner extends StatelessWidget {
-  const Banner({
-    super.key,
-  });
+class DonorBanner extends StatelessWidget {
+  const DonorBanner({super.key});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.pushNamed(context, "requests");
+        Navigator.pushNamed(context, "donor-profile");
       },
       child: Container(
         width: double.infinity,
@@ -598,7 +679,7 @@ class Banner extends StatelessWidget {
           vertical: 16,
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFF000000),
+          color: Colors.red[800],
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -606,7 +687,7 @@ class Banner extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             Text(
-              "Donate Blood,\nSave Lives",
+              "Your Blood Saves Lives",
               style: TextStyle(
                   height: 1.1,
                   fontSize: 24,
@@ -615,7 +696,7 @@ class Banner extends StatelessWidget {
             ),
             SizedBox(height: 8),
             Text(
-              "20 minutes is all that is \nneeded to save someone's life.",
+              "Last donation: 3 months ago\nYou're eligible to donate again!",
               style: TextStyle(color: Colors.white, height: 1.1),
             ),
           ],
@@ -625,8 +706,8 @@ class Banner extends StatelessWidget {
   }
 }
 
-class StatsBar extends StatelessWidget {
-  const StatsBar({super.key});
+class DonorStatsBar extends StatelessWidget {
+  const DonorStatsBar({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -648,9 +729,9 @@ class StatsBar extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            StatItem(title: "Donations", count: 120),
-            StatItem(title: "Donors", count: 85),
-            StatItem(title: "Requests", count: 150),
+            StatItem(title: "Total Donations", count: 8),
+            StatItem(title: "Lives Saved", count: 24),
+            StatItem(title: "Streak", count: 3),
           ],
         ),
       ),
@@ -689,6 +770,96 @@ class StatItem extends StatelessWidget {
   }
 }
 
+class DonationTipsCard extends StatelessWidget {
+  const DonationTipsCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.tips_and_updates, color: Colors.amber, size: 24),
+                SizedBox(width: 8),
+                Text(
+                  "Donation Tips",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            TipItem(
+              icon: Icons.local_dining,
+              text: "Eat iron-rich foods before donation",
+            ),
+            TipItem(
+              icon: Icons.water_drop,
+              text: "Stay hydrated before and after donating",
+            ),
+            TipItem(
+              icon: Icons.fitness_center,
+              text: "Avoid strenuous activity for 24 hours after",
+            ),
+            SizedBox(height: 8),
+            TextButton(
+              onPressed: () {
+                // Navigate to donation tips page
+                context.push('/donation-tips');
+              },
+              child: Text(
+                "View All Tips",
+                style: TextStyle(
+                  color: Colors.red[600],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class TipItem extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const TipItem({super.key, required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.red[400], size: 20),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// SVG Icons from home_page.dart
 const bellIcon =
     '''<svg width="15" height="20" viewBox="0 0 15 20" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path fill-rule="evenodd" clip-rule="evenodd" d="M13.9645 15.8912C13.9645 16.1628 13.7495 16.3832 13.4844 16.3832H9.22765H9.21987H1.51477C1.2505 16.3832 1.03633 16.1628 1.03633 15.8912V10.7327C1.03633 7.08053 3.93546 4.10885 7.50043 4.10885C11.0645 4.10885 13.9645 7.08053 13.9645 10.7327V15.8912ZM7.50043 18.9381C6.77414 18.9381 6.18343 18.3327 6.18343 17.5885C6.18343 17.5398 6.18602 17.492 6.19034 17.4442H8.81052C8.81484 17.492 8.81743 17.5398 8.81743 17.5885C8.81743 18.3327 8.22586 18.9381 7.50043 18.9381ZM9.12488 3.2292C9.35805 2.89469 9.49537 2.48673 9.49537 2.04425C9.49537 0.915044 8.6024 0 7.50043 0C6.39847 0 5.5055 0.915044 5.5055 2.04425C5.5055 2.48673 5.64281 2.89469 5.87512 3.2292C2.51828 3.99204 0 7.06549 0 10.7327V15.8912C0 16.7478 0.679659 17.4442 1.51477 17.4442H5.15142C5.14883 17.492 5.1471 17.5398 5.1471 17.5885C5.1471 18.9186 6.20243 20 7.50043 20C8.79843 20 9.8529 18.9186 9.8529 17.5885C9.8529 17.5398 9.85117 17.492 9.84858 17.4442H13.4844C14.3203 17.4442 15 16.7478 15 15.8912V10.7327C15 7.06549 12.4826 3.99204 9.12488 3.2292Z" fill="#626262"/>
@@ -696,3 +867,95 @@ const bellIcon =
 ''';
 const filterIcon =
     '''<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#525252"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g id="style=linear"> <g id="filter-circle"> <path id="vector" d="M2 17.5H7" stroke="#525252" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> <path id="vector_2" d="M22 6.5H17" stroke="#525252" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> <path id="vector_3" d="M13 17.5H22" stroke="#525252" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> <path id="vector_4" d="M11 6.5H2" stroke="#525252" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> <path id="vector_5" d="M10 20.3999C8.34315 20.3999 7 19.0568 7 17.3999C7 15.743 8.34315 14.3999 10 14.3999C11.6569 14.3999 13 15.743 13 17.3999C13 19.0568 11.6569 20.3999 10 20.3999Z" stroke="#525252" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> <path id="vector_6" d="M14 9.3999C15.6569 9.3999 17 8.05676 17 6.3999C17 4.74305 15.6569 3.3999 14 3.3999C12.3431 3.3999 11 4.74305 11 6.3999C11 8.05676 12.3431 9.3999 14 9.3999Z" stroke="#525252" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> </g> </g> </g></svg>''';
+
+// Define Donation model for demonstration
+class Donation {
+  final String id;
+  final String bloodType;
+  final String hospitalName;
+  final DateTime donationDate;
+  final int units;
+
+  Donation({
+    required this.id,
+    required this.bloodType,
+    required this.hospitalName,
+    required this.donationDate,
+    required this.units,
+  });
+}
+
+// ActiveDonation model
+class ActiveDonation {
+  final String id;
+  final String bloodType;
+  final String patientName;
+  final String hospitalName;
+  final DateTime appointmentDate;
+  final String status;
+
+  ActiveDonation({
+    required this.id,
+    required this.bloodType,
+    required this.patientName,
+    required this.hospitalName,
+    required this.appointmentDate,
+    required this.status,
+  });
+}
+
+// Simple service to fetch donation data
+class DonationService {
+  Future<List<Donation>> getUserDonations(String userId) async {
+    // In a real app, this would fetch from an API
+    await Future.delayed(Duration(milliseconds: 800));
+
+    return [
+      Donation(
+        id: '1',
+        bloodType: 'A+',
+        hospitalName: 'City General Hospital',
+        donationDate: DateTime.now().subtract(Duration(days: 90)),
+        units: 1,
+      ),
+      Donation(
+        id: '2',
+        bloodType: 'A+',
+        hospitalName: 'Memorial Hospital',
+        donationDate: DateTime.now().subtract(Duration(days: 180)),
+        units: 1,
+      ),
+      Donation(
+        id: '3',
+        bloodType: 'A+',
+        hospitalName: 'Community Medical Center',
+        donationDate: DateTime.now().subtract(Duration(days: 270)),
+        units: 2,
+      ),
+    ];
+  }
+
+  Future<List<ActiveDonation>> getActiveUserDonations(String userId) async {
+    // In a real app, this would fetch from an API
+    await Future.delayed(Duration(milliseconds: 800));
+
+    return [
+      ActiveDonation(
+        id: '1',
+        bloodType: 'O+',
+        patientName: 'Sarah Johnson',
+        hospitalName: 'City General Hospital',
+        appointmentDate: DateTime.now().add(Duration(days: 2)),
+        status: 'Pending',
+      ),
+      ActiveDonation(
+        id: '2',
+        bloodType: 'B-',
+        patientName: 'Michael Williams',
+        hospitalName: 'Memorial Medical Center',
+        appointmentDate: DateTime.now().add(Duration(days: 5)),
+        status: 'Pending',
+      ),
+    ];
+  }
+}

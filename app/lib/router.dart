@@ -1,7 +1,9 @@
 import 'package:app/core/enums/app_routes.dart';
 import 'package:app/pages/LoginSignup.dart';
+import 'package:app/pages/donor_homepage.dart';
 import 'package:app/pages/donors_page.dart';
 import 'package:app/pages/home_page.dart';
+import 'package:app/pages/listings_page.dart';
 import 'package:app/pages/map_screen.dart';
 import 'package:app/pages/onboarding_screen.dart';
 import 'package:app/pages/otp_screen.dart';
@@ -42,5 +44,11 @@ final GoRouter router =
       builder: (context, state) => TestingProfile()),
   GoRoute(
       path: AppRoutes.userListings.path,
-      builder: (context, state) => UserListingsPage())
+      builder: (context, state) => UserListingsPage()),
+  GoRoute(
+      path: AppRoutes.donorHome.path,
+      builder: (context, state) => DonorHomePage()),
+  GoRoute(
+      path: AppRoutes.bloodRequests.path,
+      builder: (context, state) => BloodRequestsPage()),
 ]);

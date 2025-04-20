@@ -1,12 +1,7 @@
 import 'package:app/core/enums/app_routes.dart';
-import 'package:app/core/network/dio_client.dart';
-import 'package:app/core/storage/secure_storage.dart';
 import 'package:app/core/theme/app_decorations.dart';
-import 'package:app/pages/testing_profile.dart';
 import 'package:app/services/auth_services.dart';
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
-import 'package:app/core/enums/app_routes.dart';
 import 'package:go_router/go_router.dart';
 
 class SignInScreen extends StatelessWidget {
@@ -58,11 +53,6 @@ class SignInScreen extends StatelessWidget {
   }
 }
 
-const authOutlineInputBorder = OutlineInputBorder(
-  borderSide: BorderSide(color: Color(0xFF757575)),
-  borderRadius: BorderRadius.all(Radius.circular(100)),
-);
-
 class SignInForm extends StatefulWidget {
   const SignInForm({super.key});
 
@@ -73,8 +63,6 @@ class SignInForm extends StatefulWidget {
 }
 
 class _SignInFormState extends State<SignInForm> {
-  final _dioClient = GetIt.instance.get<DioClient>();
-  final _storage = GetIt.instance.get<SecureStorage>();
   final formKey = GlobalKey<FormState>();
 
   final emailController = TextEditingController();
@@ -85,34 +73,39 @@ class _SignInFormState extends State<SignInForm> {
   Future<void> submitSignIn() async {
     final email = emailController.text;
     final password = passwordController.text;
-    try {
-      final response = await _dioClient.dio
-          .post("/auth/login", data: {"email": email, "password": password});
 
-      print(response.data);
-      if (response.statusCode == 200) {
-        String accessToken = response.data['accessToken'];
-        String refreshToken = response.data['refreshToken'];
-        final User user = User.fromJson(response.data['user']);
-        AuthService().setTokens(accessToken, refreshToken);
-        _storage.saveUser(user);
-        print(AppRoutes.home.path);
+    setState(() {
+      isLoading = true;
+    });
 
-        if (mounted) {
-          context.go(AppRoutes.home.path);
-          // context.go(AppRoutes.dummyProfile.path);
-        }
-      }
-      setState(() {
-        isLoading = false;
-      });
-    } catch (e) {
-      print("Error: $e");
+    if (email.isEmpty || password.isEmpty) {
       setState(() {
         isLoading = false;
       });
       return;
     }
+
+    final success = await AuthService().signIn(email, password, context);
+
+    if (!success) {
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
+    if (mounted) {
+      final userRoles = await AuthService().getUserRoles(context);
+      if (userRoles.contains('donor')) {
+        context.go(AppRoutes.donorHome.path);
+      } else {
+        // Change home to recipient
+        context.go(AppRoutes.home.path);
+      }
+    }
+
+    setState(() {
+      isLoading = false;
+    });
   }
 
   @override
@@ -166,34 +159,6 @@ class _SignInFormState extends State<SignInForm> {
                 : const Text("Continue"),
           )
         ],
-      ),
-    );
-  }
-}
-
-class SocialCard extends StatelessWidget {
-  const SocialCard({
-    super.key,
-    required this.icon,
-    required this.press,
-  });
-
-  final Widget icon;
-  final VoidCallback press;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: press,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        height: 56,
-        width: 56,
-        decoration: const BoxDecoration(
-          color: Color(0xFFF5F6F9),
-          shape: BoxShape.circle,
-        ),
-        child: icon,
       ),
     );
   }

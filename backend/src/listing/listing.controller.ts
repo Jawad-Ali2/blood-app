@@ -2,6 +2,8 @@ import { Body, Controller, Delete, Get, Param, Post, Query, BadRequestException 
 import { ListingService } from './listing.service';
 import { Public } from 'src/common/decorators/public.decorator';
 import { PostListingDTO } from './dto/post-listing.dto';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { ListingStatus, Role } from 'src/constants';
 
 @Controller('listing')
 export class ListingController {
@@ -100,6 +102,16 @@ export class ListingController {
     return dummyData;
   }
 
+  // This endpoint only returns the listings that are compatible with the donors's blood group
+  @Get('compatible')
+  async getCompatibleListings(@Query('bloodGroup') bloodGroup: string) {
+    if (!bloodGroup || !bloodGroup.length) {
+      throw new BadRequestException('Blood group is required. Sign up as a donor!');
+    }
+    const listings = await this.listingService.getCompatibleListings(bloodGroup);
+    return listings;
+  }
+
   @Get()
   async getAllListings() {
     const listings = await this.listingService.getListings();
@@ -129,14 +141,14 @@ export class ListingController {
     @Param('id') id: string,
     @Body('status') status: string,
   ) {
-    const validStatuses = ['active', 'canceled', 'fulfilled'];
+    const validStatuses = ['active', 'in-progress', 'canceled', 'fulfilled'];
     if (!validStatuses.includes(status)) {
-      return { 
-        success: false, 
-        message: 'Invalid status. Must be one of: active, canceled, fulfilled' 
+      return {
+        success: false,
+        message: 'Invalid status. Must be one of: active, in-progress, canceled, fulfilled'
       };
     }
-    
+
     const result = await this.listingService.updateListingStatus(id, status);
     return { success: true, data: result };
   }
@@ -161,5 +173,13 @@ export class ListingController {
     console.log(id);
     await this.listingService.deleteListing(id);
     return { success: true };
+  }
+
+  @Roles(Role.DONOR)
+  @Post('donate/:listingId')
+  async postListingAsDonor(@Param('listingId') listingId: string, @Body('donorId') donorId: string) {
+    console.log("Here", listingId, donorId);
+    const result = await this.listingService.addListingToDonorActiveRequests(listingId, donorId);
+    return { success: true, data: result };
   }
 }

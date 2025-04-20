@@ -47,6 +47,8 @@ export class User {
   @Column({nullable: true})
   isDonor: boolean;
 
+  // Add link to medical certificate later
+
   @Column({nullable: true})
   lastDonationDate: Date;
 
@@ -61,6 +63,12 @@ export class User {
 
   @OneToMany(() => Listing, (listing) => listing.user)
   listings: Listing[];
+
+  @OneToMany(() => Listing, (listing) => listing.acceptedBy)
+  acceptedListings: Listing[];
+
+  @OneToMany(() => Listing, (listing) => listing.fulfilledBy)
+  fulfilledListings: Listing[];
 
   @Column({type: 'timestamp', default: () => 'CURRENT_TIMESTAMP'})
   createdAt: Timestamp;

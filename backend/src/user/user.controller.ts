@@ -1,6 +1,8 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Public } from 'src/common/decorators/public.decorator';
+import { bloodTypeCrossMatch } from 'src/constants';
+import { filter } from 'rxjs';
 
 @Controller('user')
 export class UserController {
@@ -21,7 +23,7 @@ export class UserController {
       data: donors,
     };
   }
-  
+
 
 
   @Public()
@@ -34,7 +36,8 @@ export class UserController {
     let filteredDonors = donors.data ?? [];
 
     if (bloodGroup) {
-      filteredDonors = filteredDonors.filter(d => d.bloodGroup === bloodGroup);
+      const compatibleDonors = bloodTypeCrossMatch[bloodGroup] ?? [];
+      filteredDonors = filteredDonors?.filter(d => compatibleDonors.includes(d.bloodGroup ?? ''));
     }
 
     if (city) {
@@ -48,25 +51,24 @@ export class UserController {
     };
   }
 
+
   @Public()
   @Get('donors/nearby')
   async getNearbyDonors(
     @Query('lat') latitude: string,
     @Query('lng') longitude: string,
-    @Query('radius') radius: string = '10', // Default 10km radius
+    @Query('radius') radius: string = '10',
     @Query('bloodGroup') bloodGroup: string = ""
   ) {
     const donors = await this.getDonors();
     let filteredDonors = donors.data;
-
+    const compatibleDonors = bloodTypeCrossMatch[bloodGroup] ?? [];
     // Filter by blood group if provided
     if (bloodGroup) {
-      filteredDonors = filteredDonors?.filter(d => d.bloodGroup === bloodGroup);
+      // Get all the compaticable blood groups for the given blood group
+      filteredDonors = filteredDonors?.filter(d => compatibleDonors.includes(d.bloodGroup ?? ''));
     }
-
     filteredDonors = filteredDonors?.map(donor => {
-      // Calculate dummy distance based on coordinates
-      // In a real implementation, you would use haversine formula
       const [donorLat, donorLng] = (donor.coordinates ?? '0,0').split(',').map(Number);
       const distance = this.calculateDistance(
         Number(latitude),
@@ -77,7 +79,7 @@ export class UserController {
 
       return {
         ...donor,
-        distance: distance.toFixed(2) // Distance in km
+        distance: distance.toFixed(2)
       };
     })
       .filter(donor => Number(donor.distance) <= Number(radius))
@@ -119,7 +121,7 @@ export class UserController {
       status: 'success',
       message: 'Donor registered successfully'
     };
-    
+
   }
 
   // Helper method to calculate distance between coordinates using Haversine formula
@@ -132,7 +134,7 @@ export class UserController {
       Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c; // Distance in km
+    const distance = R * c;
     return distance;
   }
 

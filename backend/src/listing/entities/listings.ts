@@ -38,6 +38,12 @@ export class Listing {
     notes: string;
 
     // Status field for tracking listing state
+    // Create only 4 status values: active, completed, cancelled, expired
+    // active - Listing is currently active and accepting donations
+    // completed - Listing has been completed and no more donations are needed
+    // cancelled - Listing has been cancelled and no donations are needed
+    // expired - Listing has expired and no donations are needed
+    // Default value is active
     @Column({ default: 'active' })
     status: string;
 
@@ -45,6 +51,17 @@ export class Listing {
     @ManyToOne(() => User, (user) => user.listings)
     @JoinColumn({ name: "userId" })
     user: User;
+
+    // Column containing id of the user which accepted the listing
+    @ManyToOne(() => User, (user) => user.acceptedListings, { nullable: true })
+    @JoinColumn({ name: "acceptedBy" })
+    acceptedBy: User;
+
+    // Column containing id of the user which fulfilled the listing
+    @ManyToOne(() => User, (user) => user.fulfilledListings, { nullable: true })
+    @JoinColumn({ name: "fulfilledBy" })
+    fulfilledBy: User;
+
 
     @CreateDateColumn({ type: 'timestamp' })
     createdAt: Date;

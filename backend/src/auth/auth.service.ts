@@ -28,6 +28,8 @@ export class AuthService {
     city: string,
     coordinates: string,
     dob: Date,
+    isDonor: boolean,
+    bloodGroup: string,
     password: string,
     confirmPassword: string,
   ): Promise<Tokens> {
@@ -35,7 +37,6 @@ export class AuthService {
     if (password !== confirmPassword) throw new BadRequestException();
 
     try {
-      console.log(dob, typeof dob);
       const existingUser = await this.userRepository.findOne({
         where: [{ email }, { cnic }],
       });
@@ -48,19 +49,35 @@ export class AuthService {
         }
       }
 
-      // convert dob to Date type
+      let user;
 
-      const user = this.userRepository.create({
-        username,
-        phone,
-        email,
-        cnic,
-        city,
-        coordinates,
-        dateOfBirth: dob,
-        password
-      });
-
+      if (isDonor && bloodGroup) {
+        const roles = ['recipient', 'donor'];
+        user = this.userRepository.create({
+          username,
+          phone,
+          email,
+          cnic,
+          city,
+          coordinates,
+          dateOfBirth: dob,
+          password,
+          bloodGroup,
+          isDonor: true,
+          role: roles,
+        });
+      } else {
+        user = this.userRepository.create({
+          username,
+          phone,
+          email,
+          cnic,
+          city,
+          coordinates,
+          dateOfBirth: dob,
+          password,
+        });
+      }
 
       await this.userRepository.save(user);
 
@@ -70,6 +87,7 @@ export class AuthService {
         user.email,
         user.role,
         user.cnic,
+        user.bloodGroup,
       );
       return tokens;
     } catch (err) {
@@ -96,6 +114,7 @@ export class AuthService {
       user.email,
       user.role,
       user.cnic,
+      user.bloodGroup,
     );
 
     user.refreshToken = tokens.refreshToken;
@@ -107,21 +126,10 @@ export class AuthService {
       username: user.username,
       email: user.email,
       role: user.role,
+      bloodGroup: user.bloodGroup,
     };
 
     return { tokens, modifiedUser };
-  }
-
-  async guestSignIn() {
-    const guestUser = {
-      id: 'guest_' + Math.random().toString(36).substring(2, 9),
-      role: 'guest',
-    };
-
-    const payload = { sub: guestUser.id, role: guestUser.role };
-    const token = await this.jwtService.signAsync(payload, { expiresIn: '1h' });
-
-    return token;
   }
 
   async refreshAccessToken(refreshToken: string) {
@@ -142,6 +150,7 @@ export class AuthService {
       user.email,
       user.role,
       user.cnic,
+      user.bloodGroup,
     );
 
     user.refreshToken = tokens.refreshToken;
@@ -156,7 +165,8 @@ export class AuthService {
     username: string,
     email: string,
     role: string[],
-    cnic: string
+    cnic: string,
+    bloodGroup: string,
   ): Promise<Tokens> {
     const payload = {
       sub: userId,
@@ -164,6 +174,7 @@ export class AuthService {
       email,
       cnic,
       role,
+      bloodGroup
     };
 
     const [accessToken, refreshToken]: [string, string] = await Promise.all([

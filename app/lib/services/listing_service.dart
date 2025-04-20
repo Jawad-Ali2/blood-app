@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ffi';
 import 'package:app/core/network/dio_client.dart';
 import 'package:app/core/storage/secure_storage.dart';
+import 'package:app/widgets/custom_toast.dart';
 import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 import 'package:flutter/material.dart';
@@ -72,6 +73,20 @@ class ListingService {
     }
   }
 
+  Future<List<Listing>> getCompatibleListings() async {
+    try {
+      final bloodGroup = await _storage.getUserBloodGroup();
+      final encodedBloodGroup = Uri.encodeComponent(bloodGroup);
+      final response = await _dioClient.dio
+          .get('/listing/compatible?bloodGroup=$encodedBloodGroup');
+
+      final List<dynamic> data = response.data;
+      return data.map((json) => Listing.fromJson(json)).toList();
+    } on DioException catch (e) {
+      throw Exception('Failed to load compatible listings: ${e.message}');
+    }
+  }
+
   // Get dummy listings for testing
   Future<List<Listing>> getDummyListings() async {
     try {
@@ -108,7 +123,6 @@ class ListingService {
   Future<List<Listing>> getUserListings(String userId) async {
     try {
       final response = await _dioClient.dio.get('/listing/user/$userId');
-
       final List<dynamic> data = response.data;
       return data.map((json) => Listing.fromJson(json)).toList();
     } on DioException catch (e) {
@@ -138,7 +152,7 @@ class ListingService {
 
   // Update a listing status (cancel, fulfill, reactivate)
   Future<void> updateListingStatus(String listingId, String status) async {
-    if (!['active', 'canceled', 'fulfilled'].contains(status)) {
+    if (!['active', 'in-progress', 'canceled', 'fulfilled'].contains(status)) {
       throw Exception(
           'Invalid status. Must be one of: active, canceled, fulfilled');
     }
@@ -484,6 +498,25 @@ class ListingService {
       );
     } on DioException catch (e) {
       throw Exception('Failed to delete listing: ${e.message}');
+    }
+  }
+
+  Future<void> donateAndChangeStatus(context, requestId) async {
+    try {
+      final donorId = await _storage.getCurrentUserId();
+      if(donorId == "") return;
+      final response = await _dioClient.dio.post('/listing/donate/$requestId', data: {
+        'donorId': donorId,
+      });
+
+      if (response.statusCode == 201) {
+        CustomToast.show(context,
+            message: "Listing Added To Your Active List", isError: false);
+      }
+    } on DioException catch (e) {
+      CustomToast.show(context,
+          message: "Failed to donate and change status: ${e.message}",
+          isError: true, duration: Duration(seconds: 10));
     }
   }
 }

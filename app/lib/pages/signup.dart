@@ -1,16 +1,12 @@
 import 'package:app/core/enums/app_routes.dart';
-import 'package:app/core/network/dio_client.dart';
 import 'package:app/core/theme/app_decorations.dart';
-import 'package:app/pages/testing_profile.dart';
 import 'package:app/services/auth_services.dart';
-import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
-
+import 'package:app/services/location_service.dart';
+import 'package:app/widgets/form_validators.dart';
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
 class SignupPage extends StatelessWidget {
   const SignupPage({super.key});
@@ -72,16 +68,20 @@ class SignUpForm extends StatefulWidget {
 }
 
 class _SignUpFormState extends State<SignUpForm> {
-  final DioClient _dioClient = GetIt.instance.get<DioClient>();
   final formKey = GlobalKey<FormState>();
   final _step1FormKey = GlobalKey<FormState>();
   final _step2FormKey = GlobalKey<FormState>();
+  final _donorStepFormKey = GlobalKey<FormState>();
   final _step3FormKey = GlobalKey<FormState>();
+
+  final LocationService _locationService = LocationService();
 
   bool isLoading = false;
   bool isLocationLoading = false;
+  bool isDonor = false;
   String locationError = '';
   int _currentStep = 0;
+  int _totalSteps = 3;
 
   final fullNameController = TextEditingController();
   final phoneNoController = TextEditingController();
@@ -92,40 +92,43 @@ class _SignUpFormState extends State<SignUpForm> {
   final dateOfBirthController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
+  final bloodGroupController = TextEditingController();
 
-  Future<bool> _handleLocationPermission() async {
-    bool serviceEnabled;
-    LocationPermission permission;
+  File? medicalReportFile;
+  final imagePicker = ImagePicker();
 
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      setState(() {
-        locationError =
-            'Location services are disabled. Please enable the services';
-      });
-      return false;
-    }
+  final List<String> bloodGroups = [
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+    'O+',
+    'O-'
+  ];
 
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        setState(() {
-          locationError = 'Location permissions are denied';
-        });
-        return false;
+  @override
+  void initState() {
+    super.initState();
+    _updateTotalSteps();
+  }
+
+  void _updateTotalSteps() {
+    setState(() {
+      _totalSteps = isDonor ? 4 : 3;
+    });
+  }
+
+  void _toggleDonorMode() {
+    setState(() {
+      isDonor = !isDonor;
+      _updateTotalSteps();
+
+      if (_currentStep >= 2) {
+        _currentStep = isDonor ? 2 : _currentStep - 1;
       }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      setState(() {
-        locationError =
-            'Location permissions are permanently denied, we cannot request permissions.';
-      });
-      return false;
-    }
-
-    return true;
+    });
   }
 
   Future<void> _getCurrentLocation() async {
@@ -134,116 +137,70 @@ class _SignUpFormState extends State<SignUpForm> {
       locationError = '';
     });
 
-    final hasPermission = await _handleLocationPermission();
+    final result = await _locationService.getCurrentLocation();
 
-    if (!hasPermission) {
-      setState(() {
-        isLocationLoading = false;
-      });
-      return;
-    }
+    setState(() {
+      isLocationLoading = false;
 
-    try {
-      final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
-
-      final coordinates = "${position.latitude},${position.longitude}";
-      coordinatesController.text = coordinates;
-
-      List<Placemark> placemarks =
-          await placemarkFromCoordinates(position.latitude, position.longitude);
-
-      if (placemarks.isNotEmpty) {
-        final place = placemarks[0];
-        final city = place.locality ?? place.subAdministrativeArea ?? '';
-        setState(() {
-          cityController.text = city;
-          isLocationLoading = false;
-        });
+      if (result.isSuccess) {
+        cityController.text = result.city!;
+        coordinatesController.text = result.coordinates!;
       } else {
-        setState(() {
-          locationError = 'Could not determine your city';
-          isLocationLoading = false;
-        });
+        locationError = result.errorMessage!;
       }
-    } catch (e) {
-      setState(() {
-        locationError = 'Error getting location: $e';
-        isLocationLoading = false;
-      });
-    }
+    });
   }
 
   Future<void> submitSignUp() async {
-    if (!(_step3FormKey.currentState?.validate() ?? false)) {
+    GlobalKey<FormState> finalStepKey =
+        isDonor ? _step3FormKey : _donorStepFormKey;
+    if (!(finalStepKey.currentState?.validate() ?? false)) {
       return;
     }
 
-    final username = fullNameController.text;
-    final phone = phoneNoController.text;
-    final email = emailController.text;
-    final cnic = cnicController.text;
-    final city = cityController.text;
-    final coordinates = coordinatesController.text;
-    final dateOfBirth = dateOfBirthController.text;
-    final password = passwordController.text;
-    final confirmPassword = confirmPasswordController.text;
+    final userData = {
+      'username': fullNameController.text,
+      'phone': phoneNoController.text,
+      'email': emailController.text,
+      'cnic': cnicController.text,
+      'city': cityController.text,
+      'coordinates': coordinatesController.text,
+      'dateOfBirth': dateOfBirthController.text,
+      'password': passwordController.text,
+      'confirmPassword': confirmPasswordController.text,
+      'isDonor': isDonor,
+      'bloodGroup': isDonor ? bloodGroupController.text : '',
+      'medicalReportFile': medicalReportFile,
+    };
 
     setState(() {
       isLoading = true;
     });
-    try {
-      final response = await _dioClient.dio.post("/auth/register", data: {
-        "username": username,
-        "phone": phone,
-        "email": email,
-        "cnic": cnic,
-        "city": city,
-        "coordinates": coordinates,
-        "dob": dateOfBirth,
-        "password": password,
-        "confirmPassword": confirmPassword,
-      });
-      print(response);
-      if (response.statusCode == 201 && response.data["status"] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content:
-                Text("Account created successfully! Redirecting To Sign In!"),
-            duration: Duration(seconds: 2),
-          ),
-        );
-        if (mounted) {
-          context.replace(AppRoutes.login.path);
-        }
-      }
 
+    final isSuccess = await AuthService().signup(
+      userData['username'],
+      userData['phone'],
+      userData['email'],
+      userData['cnic'],
+      userData['city'],
+      userData['coordinates'],
+      userData['dateOfBirth'],
+      userData['password'],
+      userData['confirmPassword'],
+      userData['isDonor'],
+      userData['bloodGroup'],
+      userData['medicalReportFile'],
+      context,
+    );
+
+    if (isSuccess) {
       setState(() {
         isLoading = false;
       });
-    } catch (e) {
-      if (kDebugMode) {
-        print("Error: $e");
+      if (mounted) {
+        context.go(AppRoutes.login.path);
       }
-
-      if (e is DioException) {
-        print(e.response);
-        if (e.response?.statusCode == 400) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(e.response?.data['message']),
-              duration: const Duration(seconds: 10),
-            ),
-          );
-        } else if (e.response?.statusCode == 500) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Server Error! Please try again later."),
-              duration: Duration(seconds: 10),
-            ),
-          );
-        }
-      }
+    } else {
       setState(() {
         isLoading = false;
       });
@@ -260,12 +217,17 @@ class _SignUpFormState extends State<SignUpForm> {
       case 1:
         isValid = _step2FormKey.currentState?.validate() ?? false;
         break;
+      case 2:
+        isValid = isDonor
+            ? _donorStepFormKey.currentState?.validate() ?? false
+            : _step3FormKey.currentState?.validate() ?? false;
+        break;
       default:
         isValid = true;
         break;
     }
 
-    if (isValid && _currentStep < 2) {
+    if (isValid && _currentStep < _totalSteps - 1) {
       setState(() {
         _currentStep += 1;
       });
@@ -280,18 +242,28 @@ class _SignUpFormState extends State<SignUpForm> {
     }
   }
 
+  Future<void> _pickMedicalReport() async {
+    final pickedFile = await imagePicker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        medicalReportFile = File(pickedFile.path);
+      });
+    }
+  }
+
   Widget _buildStepIndicator() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildStepDot(0),
-          _buildStepLine(0),
-          _buildStepDot(1),
-          _buildStepLine(1),
-          _buildStepDot(2),
-        ],
+        children: List.generate(_totalSteps * 2 - 1, (index) {
+          if (index % 2 == 0) {
+            return _buildStepDot(index ~/ 2);
+          } else {
+            return _buildStepLine(index ~/ 2);
+          }
+        }),
       ),
     );
   }
@@ -339,16 +311,207 @@ class _SignUpFormState extends State<SignUpForm> {
   }
 
   Widget _buildStepContent() {
-    switch (_currentStep) {
-      case 0:
-        return _buildBasicInfoStep();
-      case 1:
-        return _buildPersonalDetailsStep();
-      case 2:
-        return _buildSecurityStep();
-      default:
-        return _buildBasicInfoStep();
+    if (isDonor) {
+      switch (_currentStep) {
+        case 0:
+          return _buildBasicInfoStep();
+        case 1:
+          return _buildPersonalDetailsStep();
+        case 2:
+          return _buildDonorInfoStep();
+        case 3:
+          return _buildSecurityStep();
+        default:
+          return _buildBasicInfoStep();
+      }
+    } else {
+      switch (_currentStep) {
+        case 0:
+          return _buildBasicInfoStep();
+        case 1:
+          return _buildPersonalDetailsStep();
+        case 2:
+          return _buildSecurityStep();
+        default:
+          return _buildBasicInfoStep();
+      }
     }
+  }
+
+  Widget _buildDonorInfoStep() {
+    return Form(
+      key: _donorStepFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 16.0, left: 8.0),
+            child: Text(
+              "Donor Information",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF303030),
+              ),
+            ),
+          ),
+          DropdownButtonFormField<String>(
+            value: bloodGroupController.text.isNotEmpty
+                ? bloodGroupController.text
+                : null,
+            borderRadius: BorderRadius.circular(12),
+            decoration: AppDecorations.textFieldDecoration(
+              hintText: "Select your blood group",
+              labelText: "Blood Group",
+              icon: bloodDropIcon,
+            ),
+            items: bloodGroups.map((String group) {
+              return DropdownMenuItem<String>(
+                value: group,
+                child: Text(group),
+              );
+            }).toList(),
+            onChanged: (String? value) {
+              if (value != null) {
+                setState(() {
+                  bloodGroupController.text = value;
+                });
+              }
+            },
+            validator: FormValidators.validateBloodGroup,
+          ),
+          const Padding(
+            padding: EdgeInsets.only(left: 12.0, top: 8.0, bottom: 16.0),
+            child: Text(
+              "Your blood group should match your medical report",
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF757575),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: _pickMedicalReport,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    medicalReportFile != null
+                        ? Icons.check_circle
+                        : Icons.upload_file,
+                    color: medicalReportFile != null
+                        ? Colors.green
+                        : const Color(0xFFE0313B),
+                    size: 48,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    medicalReportFile != null
+                        ? "Medical Report Uploaded"
+                        : "Upload Medical Report (Optional)",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: medicalReportFile != null
+                          ? Colors.green
+                          : const Color(0xFF303030),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    medicalReportFile != null
+                        ? "Tap to change file"
+                        : "Tap to upload a document verifying your blood group",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF757575),
+                    ),
+                  ),
+                  if (medicalReportFile != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        medicalReportFile!.path.split('/').last,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF757575),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 12.0, top: 8.0),
+            child: FormField<bool>(
+              builder: (FormFieldState<bool> field) {
+                if (field.hasError) {
+                  return Text(
+                    field.errorText!,
+                    style: const TextStyle(
+                      color: Color(0xFFE0313B),
+                      fontSize: 12,
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+          Row(
+            children: [
+              const Icon(
+                Icons.info_outline,
+                color: Color(0xFFE0313B),
+                size: 16,
+              ),
+              const Text(
+                "By Uploading Medical Reports You Can Earn Credibility Points",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF757575),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF4F5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFFDADD)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  "Benefits of being a donor:",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFE0313B),
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(height: 8),
+                _BenefitItem(text: "Priority access to emergency services"),
+                _BenefitItem(text: "Free annual health check-ups"),
+                _BenefitItem(text: "Donation certificates and recognition"),
+                _BenefitItem(text: "Join a community saving lives"),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildBasicInfoStep() {
@@ -375,15 +538,7 @@ class _SignUpFormState extends State<SignUpForm> {
               onSaved: (username) {},
               onChanged: (username) {},
               textInputAction: TextInputAction.next,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your full name';
-                }
-                if (value.trim().length < 3) {
-                  return 'Name must be at least 3 characters';
-                }
-                return null;
-              },
+              validator: FormValidators.validateName,
               decoration: AppDecorations.textFieldDecoration(
                   hintText: "Enter your full name",
                   labelText: "Full Name",
@@ -405,15 +560,7 @@ class _SignUpFormState extends State<SignUpForm> {
             onSaved: (number) {},
             onChanged: (number) {},
             keyboardType: TextInputType.phone,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your phone number';
-              }
-              if (!RegExp(r'^\d{10,12}$').hasMatch(value.trim())) {
-                return 'Enter a valid phone number (10-12 digits)';
-              }
-              return null;
-            },
+            validator: FormValidators.validatePhone,
             decoration: AppDecorations.textFieldDecoration(
                 hintText: "Enter a phone number",
                 labelText: "Phone Number",
@@ -436,16 +583,7 @@ class _SignUpFormState extends State<SignUpForm> {
               onSaved: (email) {},
               onChanged: (email) {},
               keyboardType: TextInputType.emailAddress,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your email';
-                }
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                    .hasMatch(value.trim())) {
-                  return 'Please enter a valid email';
-                }
-                return null;
-              },
+              validator: FormValidators.validateEmail,
               decoration: AppDecorations.textFieldDecoration(
                   hintText: "Enter an email",
                   labelText: "Email",
@@ -489,16 +627,7 @@ class _SignUpFormState extends State<SignUpForm> {
             onSaved: (cnic) {},
             onChanged: (cnic) {},
             keyboardType: TextInputType.phone,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your CNIC number';
-              }
-              if (!RegExp(r'^\d{5}-\d{7}-\d{1}$').hasMatch(value.trim()) &&
-                  !RegExp(r'^\d{13}$').hasMatch(value.trim())) {
-                return 'Enter valid CNIC (13 digits or format: #####-#######-#)';
-              }
-              return null;
-            },
+            validator: FormValidators.validateCnic,
             decoration: AppDecorations.textFieldDecoration(
                 hintText: "Enter a valid CNIC",
                 labelText: "CNIC number",
@@ -525,12 +654,7 @@ class _SignUpFormState extends State<SignUpForm> {
                   readOnly: true,
                   onSaved: (city) {},
                   onChanged: (city) {},
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please use "Use Current Location" to set your city';
-                    }
-                    return null;
-                  },
+                  validator: FormValidators.validateCity,
                   decoration: AppDecorations.textFieldDecoration(
                     hintText: "Use Current Location to set city",
                     labelText: "City",
@@ -597,14 +721,8 @@ class _SignUpFormState extends State<SignUpForm> {
           TextFormField(
             controller: dateOfBirthController,
             readOnly: true,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please select your date of birth';
-              }
-              return null;
-            },
+            validator: FormValidators.validateDateOfBirth,
             onTap: () async {
-              // Calculate date 18 years ago from today
               final DateTime eighteenYearsAgo =
                   DateTime.now().subtract(const Duration(days: 365 * 18));
 
@@ -612,9 +730,8 @@ class _SignUpFormState extends State<SignUpForm> {
                 context: context,
                 initialDate: eighteenYearsAgo,
                 firstDate: DateTime(1900),
-                lastDate: eighteenYearsAgo, // Set maximum date to 18 years ago
+                lastDate: eighteenYearsAgo,
                 selectableDayPredicate: (DateTime date) {
-                  // Only allow dates on or before 18 years ago
                   return date.compareTo(eighteenYearsAgo) <= 0;
                 },
               );
@@ -672,15 +789,7 @@ class _SignUpFormState extends State<SignUpForm> {
               obscureText: true,
               onSaved: (password) {},
               onChanged: (password) {},
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a password';
-                }
-                if (value.length < 6) {
-                  return 'Password must be at least 6 characters';
-                }
-                return null;
-              },
+              validator: FormValidators.validatePassword,
               decoration: AppDecorations.textFieldDecoration(
                   hintText: "Create a password",
                   labelText: "Password",
@@ -702,24 +811,16 @@ class _SignUpFormState extends State<SignUpForm> {
             obscureText: true,
             onSaved: (confirmPassword) {},
             onChanged: (confirmPassword) {},
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please confirm your password';
-              }
-              if (value != passwordController.text) {
-                return 'Passwords do not match';
-              }
-              return null;
-            },
+            validator: (value) => FormValidators.validateConfirmPassword(
+              value,
+              passwordController.text,
+            ),
             decoration: AppDecorations.textFieldDecoration(
                 hintText: "Re-enter your password",
                 labelText: "Confirm Password",
                 icon: passwordIcon),
           ),
-
           const SizedBox(height: 32),
-
-          // Terms and Conditions Checkbox
           FormField<bool>(
             initialValue: false,
             validator: (value) {
@@ -810,51 +911,159 @@ class _SignUpFormState extends State<SignUpForm> {
   }
 
   Widget _buildNavigationButtons() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 32.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _currentStep > 0
-              ? ElevatedButton(
-                  onPressed: _previousStep,
-                  style: ElevatedButton.styleFrom(
-                    elevation: 0,
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFFE0313B),
-                    side: const BorderSide(color: Color(0xFFE0313B)),
-                    minimumSize: const Size(120, 48),
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(16)),
-                    ),
+    final bool isLastStep = _currentStep == _totalSteps - 1;
+
+    return Column(
+      children: [
+        if (_currentStep == 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDonor ? const Color(0xFFFFF4F5) : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color:
+                      isDonor ? const Color(0xFFE0313B) : Colors.grey.shade300,
+                  width: 1,
+                ),
+              ),
+              child: InkWell(
+                onTap: _toggleDonorMode,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: isDonor
+                              ? const Color(0xFFFFDADD)
+                              : Colors.grey.shade200,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isDonor ? Icons.favorite : Icons.favorite_border,
+                          color: isDonor
+                              ? const Color(0xFFE0313B)
+                              : Colors.grey.shade700,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  isDonor
+                                      ? "Signing up as a Donor"
+                                      : "Sign up as a Donor",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isDonor
+                                        ? const Color(0xFFE0313B)
+                                        : Colors.black,
+                                  ),
+                                ),
+                                if (isDonor)
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE0313B),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Text(
+                                      "Hero",
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              isDonor
+                                  ? "You're on the path to saving lives!"
+                                  : "Be a hero - help save lives by donating blood",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        isDonor ? Icons.check_circle : Icons.arrow_forward_ios,
+                        color: isDonor
+                            ? const Color(0xFFE0313B)
+                            : Colors.grey.shade400,
+                        size: isDonor ? 24 : 16,
+                      ),
+                    ],
                   ),
-                  child: const Text("Previous"),
-                )
-              : const SizedBox(width: 120),
-          ElevatedButton(
-            onPressed: _currentStep < 2 ? _nextStep : submitSignUp,
-            style: ElevatedButton.styleFrom(
-              elevation: 0,
-              backgroundColor: const Color(0xFFE0313B),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(120, 48),
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(16)),
+                ),
               ),
             ),
-            child: isLoading && _currentStep == 2
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : Text(_currentStep < 2 ? "Next" : "Submit"),
           ),
-        ],
-      ),
+        Padding(
+          padding: const EdgeInsets.only(top: 32.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _currentStep > 0
+                  ? ElevatedButton(
+                      onPressed: _previousStep,
+                      style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFFE0313B),
+                        side: const BorderSide(color: Color(0xFFE0313B)),
+                        minimumSize: const Size(120, 48),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(16)),
+                        ),
+                      ),
+                      child: const Text("Previous"),
+                    )
+                  : const SizedBox(width: 120),
+              ElevatedButton(
+                onPressed: isLastStep ? submitSignUp : _nextStep,
+                style: ElevatedButton.styleFrom(
+                  elevation: 0,
+                  backgroundColor: const Color(0xFFE0313B),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(120, 48),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(16)),
+                  ),
+                ),
+                child: isLoading && isLastStep
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(isLastStep ? "Submit" : "Next"),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -873,7 +1082,39 @@ class _SignUpFormState extends State<SignUpForm> {
   }
 }
 
-// Icons
+class _BenefitItem extends StatelessWidget {
+  final String text;
+
+  const _BenefitItem({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.check_circle,
+            color: Color(0xFFE0313B),
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF505050),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 const userIcon =
     '''<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path fill-rule="evenodd" clip-rule="evenodd" d="M14.8331 14.6608C14.6271 14.9179 14.3055 15.0713 13.9729 15.0713H2.02715C1.69446 15.0713 1.37287 14.9179 1.16692 14.6608C0.972859 14.4191 0.906322 14.1271 0.978404 13.8382C1.77605 10.6749 4.66327 8.46512 8.0004 8.46512C11.3367 8.46512 14.2239 10.6749 15.0216 13.8382C15.0937 14.1271 15.0271 14.4191 14.8331 14.6608ZM4.62208 4.23295C4.62208 2.41197 6.13737 0.929467 8.0004 0.929467C9.86263 0.929467 11.3779 2.41197 11.3779 4.23295C11.3779 6.0547 9.86263 7.53565 8.0004 7.53565C6.13737 7.53565 4.62208 6.0547 4.62208 4.23295ZM15.9444 13.6159C15.2283 10.7748 13.0231 8.61461 10.2571 7.84315C11.4983 7.09803 12.3284 5.75882 12.3284 4.23295C12.3284 1.89921 10.387 0 8.0004 0C5.613 0 3.67155 1.89921 3.67155 4.23295C3.67155 5.75882 4.50168 7.09803 5.7429 7.84315C2.97688 8.61461 0.771665 10.7748 0.0556038 13.6159C-0.0861827 14.179 0.0460985 14.7692 0.419179 15.2332C0.808894 15.7212 1.39584 16 2.02715 16H13.9729C14.6042 16 15.1911 15.7212 15.5808 15.2332C15.9539 14.7692 16.0862 14.179 15.9444 13.6159Z" fill="#626262"/>
@@ -903,4 +1144,10 @@ const cardIcon =
 const passwordIcon =
     '''<svg width="10" height="14" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path fill-rule="evenodd" clip-rule="evenodd" d="M9 0C6.24 0 4 2.24 4 5V7H3C1.89 7 1 7.89 1 9V16C1 17.11 1.89 18 3 18H15C16.11 18 17 17.11 17 16V9C17 7.89 16.11 7 15 7H14V5C14 2.24 11.76 0 9 0ZM6 5C6 3.34 7.34 2 9 2C10.66 2 12 3.34 12 5V7H6V5ZM3 9H15V16H3V9ZM9 10C8.45 10 8 10.45 8 11V13C8 13.55 8.45 14 9 14C9.55 14 10 13.55 10 13V11C10 10.45 9.55 10 9 10Z" fill="#626262"/>
+</svg>''';
+
+const bloodDropIcon =
+    '''<svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M8 0C8 0 3 5.0944 3 12C3 15.9228 5.23858 19 8 19C10.7614 19 13 15.9228 13 12C13 5.0944 8 0 8 0Z" stroke="#626262" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M5.5 12.5C5.5 15.3 6.5 17 8 17" stroke="#626262" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>''';

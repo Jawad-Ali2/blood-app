@@ -10,7 +10,9 @@ enum AppRoutes {
   map,
   splash,
   dummyProfile,
-  userListings
+  userListings,
+  donorHome,
+  bloodRequests,
 }
 
 extension AppRoutesExtension on AppRoutes {
@@ -40,6 +42,10 @@ extension AppRoutesExtension on AppRoutes {
         return "/dummyProfile";
       case AppRoutes.userListings:
         return "/user-listings";
+      case AppRoutes.donorHome:
+        return "/donor-homepage";
+      case AppRoutes.bloodRequests:
+        return "/listings";
     }
   }
 }

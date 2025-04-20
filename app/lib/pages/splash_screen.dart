@@ -17,11 +17,20 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkAuthentication() async {
     await Future.delayed(Duration(seconds: 2)); // Simulate loading time
+    if (!mounted) return;
     bool isLoggedIn = await AuthService().isUserLoggedIn();
+    final userRoles = await AuthService().getUserRoles(context);
 
     if (mounted) {
       if (isLoggedIn) {
-        context.go(AppRoutes.home.path);
+          print("ROLES: $userRoles");
+        if (userRoles.contains('donor')) {
+          context.go(AppRoutes.donorHome.path);
+          // context.go(AppRoutes.home.path);
+        } else {
+          // Change home to recipient
+          context.go(AppRoutes.home.path);
+        }
         // context.go(AppRoutes.dummyProfile.path);
       } else {
         context.go(AppRoutes.onboarding.path);

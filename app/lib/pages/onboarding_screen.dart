@@ -1,5 +1,6 @@
 import 'package:app/pages/signin.dart';
 import 'package:app/pages/signup.dart';
+import 'package:app/widgets/onboarding_carousel.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -11,7 +12,6 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  int currentPage = 0;
   List<Map<String, String>> splashData = [
     {
       "text": "Welcome to DonorX, saving lives starts here!",
@@ -31,8 +31,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           "https://cdni.iconscout.com/illustration/premium/thumb/blood-donation-awareness-illustration-download-in-svg-png-gif-file-formats--lifesaving-contributions-global-drive-volunteer-donors-supply-support-donor-appreciation-world-day-pack-medical-equipment-illustrations-8778426.png?f=webp"
     },
     {
-      "text":
-          "Get notified when donors or recipients are available near you.",
+      "text": "Get notified when donors or recipients are available near you.",
       "image":
           "https://cdni.iconscout.com/illustration/premium/thumb/lifesaving-contributions-illustration-download-in-svg-png-gif-file-formats--blood-donation-awareness-global-drive-volunteer-donors-world-donor-day-pack-medical-equipment-illustrations-8778427.png"
     }
@@ -40,6 +39,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final Size screenSize = MediaQuery.of(context).size;
+    final double verticalPadding = screenSize.height * 0.05;
+    final double horizontalPadding = screenSize.width * 0.1;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -48,49 +51,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Column(
             children: [
               SizedBox(
-                height: 10,
+                height: screenSize.height * 0.03,
               ),
               Expanded(
                 flex: 3,
-                child: PageView.builder(
-                  onPageChanged: (value) {
-                    setState(() {
-                      currentPage = value;
-                    });
-                  },
-                  itemCount: splashData.length,
-                  itemBuilder: (context, index) => SplashContent(
-                    image: splashData[index]["image"],
-                    text: splashData[index]['text'],
-                  ),
+                child: OnboardingCarousel(
+                  pages: splashData,
                 ),
               ),
               Expanded(
                 flex: 2,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: verticalPadding * 0.5,
+                  ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
                       const Spacer(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          splashData.length,
-                          (index) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
-                            margin: const EdgeInsets.only(right: 5),
-                            height: 6,
-                            width: currentPage == index ? 20 : 6,
-                            decoration: BoxDecoration(
-                              color: currentPage == index
-                                  ? const Color(0xFFE0313B)
-                                  : const Color(0xFFD8D8D8),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const Spacer(flex: 3),
                       ElevatedButton(
                         onPressed: () {
                           Navigator.push(
@@ -101,21 +81,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         style: ElevatedButton.styleFrom(
                           elevation: 0,
                           backgroundColor: const Color(0xFFFFFFFF),
-                          // backgroundColor: const Color(0xFFE0313B), RED
                           foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 48),
+                          padding: EdgeInsets.symmetric(
+                            vertical: screenSize.height * 0.02,
+                          ),
+                          minimumSize:
+                              Size(double.infinity, screenSize.height * 0.06),
                           shape: const RoundedRectangleBorder(
                             side: BorderSide(color: Colors.black, width: 1.5),
                             borderRadius: BorderRadius.all(Radius.circular(16)),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           "Sign In",
-                          style: TextStyle(color: Colors.black),
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: screenSize.width * 0.04,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                       SizedBox(
-                        height: 8,
+                        height: screenSize.height * 0.015,
                       ),
                       ElevatedButton(
                         onPressed: () {
@@ -128,14 +115,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           elevation: 0,
                           backgroundColor: const Color(0xFFB80F19),
                           foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 48),
+                          padding: EdgeInsets.symmetric(
+                            vertical: screenSize.height * 0.02,
+                          ),
+                          minimumSize:
+                              Size(double.infinity, screenSize.height * 0.06),
                           shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.all(Radius.circular(16)),
                           ),
                         ),
-                        child: const Text("Sign Up"),
+                        child: Text(
+                          "Sign Up",
+                          style: TextStyle(
+                            fontSize: screenSize.width * 0.04,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                      const Spacer(),
+                      SizedBox(height: screenSize.height * 0.02),
                     ],
                   ),
                 ),
@@ -144,56 +141,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class SplashContent extends StatefulWidget {
-  const SplashContent({
-    super.key,
-    this.text,
-    this.image,
-  });
-
-  final String? text, image;
-
-  @override
-  State<SplashContent> createState() => _SplashContentState();
-}
-
-class _SplashContentState extends State<SplashContent> {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        const Spacer(),
-        Text(
-          "DonorX",
-          style: GoogleFonts.dmSans(
-            fontSize: 32,
-            color: Color(0xFFB80F19),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Text(
-            widget.text!,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-        ),
-        const Spacer(flex: 2),
-        Image.network(
-          widget.image!,
-          fit: BoxFit.cover,
-          height: 265,
-          width: 320,
-        ),
-      ],
     );
   }
 }

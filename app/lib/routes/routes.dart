@@ -1,18 +1,16 @@
+import 'package:app/pages/listings_page.dart';
 import 'package:app/pages/testing_profile.dart';
 import 'package:app/pages/user_listings_page.dart';
 import 'package:app/pages/user_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:app/pages/donors_page.dart';
-
-// import 'package:app/pages/edit_profile.dart';
 import 'package:app/pages/home_page.dart';
 import 'package:app/pages/onboarding_screen.dart';
 import 'package:app/pages/otp_screen.dart';
-
-// import 'package:app/pages/requests_page.dart';
 import 'package:app/pages/settings.dart';
 import 'package:app/pages/signin.dart';
 import 'package:app/pages/signup.dart';
+import '../pages/donor_homepage.dart';
 
 Map<String, WidgetBuilder> routes = {
   "onboard": (context) => OnboardingScreen(),
@@ -26,5 +24,6 @@ Map<String, WidgetBuilder> routes = {
   "settings": (context) => SettingsScreen(),
   "donors": (context) => DonorsPage(),
   "user-listing": (context) => UserListingsPage(),
-  // "requests": (context) => RequestsPage(),
+  "donor-homepage": (context) => DonorHomePage(),
+  "listings": (context) => BloodRequestsPage(),
 };
