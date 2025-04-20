@@ -2,6 +2,7 @@ import 'package:app/core/enums/app_routes.dart';
 import 'package:app/core/theme/app_decorations.dart';
 import 'package:app/services/auth_services.dart';
 import 'package:app/services/location_service.dart';
+import 'package:app/utils/blood_topics.dart';
 import 'package:app/widgets/form_validators.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -97,17 +98,6 @@ class _SignUpFormState extends State<SignUpForm> {
   File? medicalReportFile;
   final imagePicker = ImagePicker();
 
-  final List<String> bloodGroups = [
-    'A+',
-    'A-',
-    'B+',
-    'B-',
-    'AB+',
-    'AB-',
-    'O+',
-    'O-'
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -153,7 +143,7 @@ class _SignUpFormState extends State<SignUpForm> {
 
   Future<void> submitSignUp() async {
     GlobalKey<FormState> finalStepKey =
-        isDonor ? _step3FormKey : _donorStepFormKey;
+        isDonor ?  _donorStepFormKey : _step3FormKey;
     if (!(finalStepKey.currentState?.validate() ?? false)) {
       return;
     }

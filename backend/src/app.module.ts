@@ -6,6 +6,8 @@ import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { ListingModule } from './listing/listing.module';
+import { FcmModule } from './fcm/fcm.module';
+import { FirebaseModule } from './firebase/firebase.module';
 
 @Module({
   imports: [
@@ -27,7 +29,9 @@ import { ListingModule } from './listing/listing.module';
     }),
     UserModule,
     AuthModule,
-    ListingModule
+    ListingModule,
+    FcmModule,
+    // FirebaseModule
   ],
   controllers: [AppController],
   providers: [AppService],

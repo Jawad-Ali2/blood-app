@@ -27,6 +27,7 @@ export class ListingController {
     }
   }
 
+  @Public()
   @Post('emergency')
   async postEmergencyListing(@Body() body: PostListingDTO) {
     body.isEmergency = true;

@@ -208,12 +208,12 @@ List<Map<String, dynamic>> demoCategories = [
 ];
 
 class Donors extends StatelessWidget {
-  const Donors({
+  Donors({
     super.key,
     required this.donors,
   });
 
-  final List donors;
+  List donors;
 
   @override
   Widget build(BuildContext context) {

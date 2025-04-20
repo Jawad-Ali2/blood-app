@@ -1,10 +1,8 @@
 import 'package:app/core/storage/secure_storage.dart';
-import 'package:app/services/auth_services.dart';
 import 'package:app/services/listing_service.dart';
 import 'package:app/widgets/app_bar.dart';
 import 'package:app/widgets/nav_bar.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:get_it/get_it.dart';
 
@@ -275,10 +273,10 @@ class BloodCompatibilityCard extends StatelessWidget {
   final List<String> compatibleTypes;
 
   const BloodCompatibilityCard({
-    Key? key,
+    super.key,
     required this.userBloodType,
     required this.compatibleTypes,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

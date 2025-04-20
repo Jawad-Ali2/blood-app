@@ -12,7 +12,7 @@ class DonorCard extends StatelessWidget {
   final Donor donor;
   final LatLng userLocation;
 
-  const DonorCard({required this.donor, required this.userLocation});
+  const DonorCard({super.key, required this.donor, required this.userLocation});
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +57,8 @@ class DonorCard extends StatelessWidget {
 }
 
 class MapScreen extends StatefulWidget {
+  const MapScreen({super.key});
+
   @override
   _MapScreenState createState() => _MapScreenState();
 }
@@ -65,6 +67,7 @@ class _MapScreenState extends State<MapScreen> {
   LatLng? userLocation;
   List<Donor> donors = [];
   final MapController _mapController = MapController();
+  final ValueNotifier<double> _zoomNotifier = ValueNotifier(13.0);
   final _dioClient = GetIt.instance.get<DioClient>();
   bool isLoading = true;
   bool _mapInitialized = false;
@@ -98,7 +101,7 @@ class _MapScreenState extends State<MapScreen> {
           await _dioClient.dio.get("/user/donors/nearby", queryParameters: {
         "lat": userLocation!.latitude,
         "lng": userLocation!.longitude,
-        "radius": "10" // 10km radius
+        "radius": "100" // 10km radius
       });
 
       // Check if widget is still mounted before updating state
@@ -171,37 +174,76 @@ class _MapScreenState extends State<MapScreen> {
               },
               initialCenter: userLocation!,
               initialZoom: 13.0,
+              // maxZoom: 18.0,
+              onPositionChanged: (pos, hasGesture) {
+                double newZoom = pos.zoom;
+                if ((newZoom - _zoomNotifier.value).abs() >= 0.2) {
+                  _zoomNotifier.value = newZoom;
+                }
+              },
             ),
             children: [
               TileLayer(
                 urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 subdomains: ['a', 'b', 'c'],
               ),
-              MarkerLayer(
-                markers: [
-                  // User marker
-                  Marker(
-                    point: userLocation!,
-                    width: 40,
-                    height: 40,
-                    child: Icon(Icons.person_pin_circle_rounded,
-                        size: 35, color: Colors.teal[400]),
-                  ),
-                  // Donor markers
-                  ...donors.map(
-                    (donor) => Marker(
-                      point: donor.location,
-                      width: 40,
-                      height: 40,
-                      child: Icon(
-                        Icons.bloodtype,
-                        size: 32,
-                        color: _getBloodGroupColor(donor.bloodGroup),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              ValueListenableBuilder<double>(
+                  valueListenable: _zoomNotifier,
+                  builder: (context, zoom, _) {
+                    return MarkerLayer(
+                      markers: [
+                        // User marker
+                        Marker(
+                          point: userLocation!,
+                          width: 40,
+                          height: 40,
+                          child: Icon(Icons.person_pin_circle_rounded,
+                              size: 35, color: Colors.teal[400]),
+                        ),
+                        // Donor markers
+                        ...donors.map((donor) {
+
+                          double scale = (zoom - 10).clamp(0.0, 1.0);
+                          double fontSize = 10 + (scale * 2);
+                          double markerSize = 28 + (scale * 10);
+
+                          return Marker(
+                            point: donor.location,
+                            width: markerSize,
+                            height: markerSize,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Container(
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: _getBloodGroupColor(donor.bloodGroup)
+                                      .withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 4,
+                                      offset: Offset(2, 2),
+                                    ),
+                                  ],
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 4),
+                                child: Text(
+                                  donor.bloodGroup,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: fontSize,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    );
+                  }),
             ],
           ),
           Positioned(

@@ -1,5 +1,6 @@
 import 'package:app/core/network/dio_client.dart';
 import 'package:app/core/storage/secure_storage.dart';
+import 'package:app/services/notification_service.dart';
 import 'package:app/widgets/custom_toast.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -132,8 +133,14 @@ class AuthService {
         "medicalReportFile": medicalReportFile,
       });
       if (response.statusCode == 201 && response.data["status"] == 'success') {
-        CustomToast.show(context,
-            message: "User registered successfully", isError: false);
+        CustomToast.show(
+          context,
+          message: "User registered successfully",
+          isError: false,
+        );
+        if (bloodGroup.isNotEmpty) {
+            await NotificationService.subscribeToBloodGroup(bloodGroup);
+        }
       }
       return true;
     } catch (e) {

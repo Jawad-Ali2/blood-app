@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 import { PostListingDTO } from './dto/post-listing.dto';
 import { User } from 'src/user/entities/user.entity';
 import { ListingStatus } from 'src/constants';
+import { FcmService } from 'src/fcm/fcm.service';
+import { bloodGroupToTopic } from 'src/utils/blood_topics';
 
 @Injectable()
 export class ListingService {
@@ -13,7 +15,8 @@ export class ListingService {
     private listingRepository: Repository<Listing>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-  ) { }
+    private readonly FcmService: FcmService,
+  ) {}
 
   async postListing(listingData: PostListingDTO): Promise<Listing> {
     // Find the user
@@ -66,7 +69,20 @@ export class ListingService {
     });
 
     // Save the listing
-    return this.listingRepository.save(newListing);
+    const savedListing = await this.listingRepository.save(newListing);
+
+    if (listingData.isEmergency) {
+      const topic = bloodGroupToTopic(listingData.groupRequired); // e.g., 'O+', 'A-'
+      const title = '🚨 Blood Needed Urgently';
+      const body = `Someone needs ${listingData.groupRequired} blood nearby. Tap to help.`;
+  
+      await this.FcmService.sendToTopic(topic, title, body, {
+        listingId: savedListing.id.toString(),
+        requesterId: savedListing.user.id.toString(),
+      });
+    }
+
+    return savedListing;
   }
 
   async cancelAllActiveListings(userId: string): Promise<void> {
