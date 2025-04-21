@@ -210,11 +210,11 @@ export class ListingService {
   async addListingToDonorActiveRequests(listingId: string, userId: string): Promise<Listing> {
     try {
       // Find the listing with relations to see current acceptedBy
-      const listing = await this.listingRepository.findOne({ 
+      const listing = await this.listingRepository.findOne({
         where: { id: listingId },
-        relations: ['acceptedBy', 'user'] 
+        relations: ['acceptedBy', 'user']
       });
-      
+
       if (!listing) {
         throw new NotFoundException(`Listing with ID ${listingId} not found`);
       }
@@ -245,7 +245,7 @@ export class ListingService {
       // Assign donor to the listing and change status
       listing.acceptedBy = donor;
       listing.status = ListingStatus.IN_PROGRESS;
-      
+
       // Return the updated listing
       return await this.listingRepository.save(listing);
     } catch (error) {
@@ -255,6 +255,24 @@ export class ListingService {
       }
       throw new BadRequestException(`Failed to accept blood request: ${error.message}`);
     }
+  }
+
+
+  async getDonorActiveListing(donorId: string) : Promise<Listing[]> {
+    try {
+      const listings = await this.listingRepository.find({
+        where: {
+          acceptedBy: { id: donorId },
+          status: ListingStatus.IN_PROGRESS,
+        },
+        relations: ['user'],
+      });
+
+      return listings;
+    } catch (error) {
+      throw new BadRequestException(`Failed to get donor active listing: ${error.message}`);
+    }
+
   }
 
   // Helper method to check blood type compatibility
@@ -270,7 +288,7 @@ export class ListingService {
       'AB-': ['AB-', 'AB+'],
       'AB+': ['AB+'],
     };
-    
+
     return compatibilityMap[donorType]?.includes(requestedType) || false;
   }
 }

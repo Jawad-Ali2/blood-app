@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ffi';
 import 'package:app/core/network/dio_client.dart';
 import 'package:app/core/storage/secure_storage.dart';
+import 'package:app/services/auth_services.dart';
 import 'package:app/widgets/custom_toast.dart';
 import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
@@ -20,6 +21,8 @@ class Listing {
   final String? notes;
   final Map<String, dynamic> user;
   final String status;
+  User? acceptedBy;
+  User? fulfilledBy;
   final DateTime createdAt;
 
   Listing({
@@ -36,6 +39,8 @@ class Listing {
     this.status = 'active',
     required this.user,
     required this.createdAt,
+    this.acceptedBy,
+    this.fulfilledBy,
   });
 
   factory Listing.fromJson(Map<String, dynamic> json) {
@@ -504,8 +509,9 @@ class ListingService {
   Future<void> donateAndChangeStatus(context, requestId) async {
     try {
       final donorId = await _storage.getCurrentUserId();
-      if(donorId == "") return;
-      final response = await _dioClient.dio.post('/listing/donate/$requestId', data: {
+      if (donorId == "") return;
+      final response =
+          await _dioClient.dio.post('/listing/donate/$requestId', data: {
         'donorId': donorId,
       });
 
@@ -516,7 +522,45 @@ class ListingService {
     } on DioException catch (e) {
       CustomToast.show(context,
           message: "Failed to donate and change status: ${e.message}",
-          isError: true, duration: Duration(seconds: 10));
+          isError: true,
+          duration: Duration(seconds: 10));
+    }
+  }
+
+  Future<List<Listing>> getActiveUserDonations(String donorId) async {
+    try {
+      final response =
+          await _dioClient.dio.get('/listing/donorActiveListing/$donorId');
+
+      // Check the structure of the response data
+      final data = response.data;
+
+      // If the response is a list, process it directly
+      if (data is List) {
+        return data
+            .map((json) => Listing.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+
+      // If the response is a map with a data field
+      if (data is Map<String, dynamic> && data.containsKey('data')) {
+        final listData = data['data'];
+        if (listData is List) {
+          return listData
+              .map((json) => Listing.fromJson(json as Map<String, dynamic>))
+              .toList();
+        }
+      }
+
+      // If we reach here, the data format was unexpected
+      print("Unexpected data format from API: $data");
+      return [];
+    } on DioException catch (e) {
+      print("Error fetching active donations: ${e.message}");
+      if (e.response != null) {
+        print("Response data: ${e.response?.data}");
+      }
+      throw Exception('Failed to load active donations: ${e.message}');
     }
   }
 }

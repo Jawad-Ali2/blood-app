@@ -18,11 +18,13 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  GetIt.instance.registerSingleton<SecureStorage>(SecureStorage());
+  GetIt.instance.registerSingleton<DioClient>(DioClient());
+
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await NotificationService.init();
   // SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  GetIt.instance.registerSingleton<SecureStorage>(SecureStorage());
-  GetIt.instance.registerSingleton<DioClient>(DioClient());
   runApp(const BloodApp());
 }
 

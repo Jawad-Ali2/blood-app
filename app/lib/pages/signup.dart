@@ -4,10 +4,14 @@ import 'package:app/services/auth_services.dart';
 import 'package:app/services/location_service.dart';
 import 'package:app/utils/blood_topics.dart';
 import 'package:app/widgets/form_validators.dart';
+import 'package:app/widgets/phone_verification_widget.dart';
+import 'package:app/widgets/email_verification_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+
+import '../widgets/custom_toast.dart';
 
 class SignupPage extends StatelessWidget {
   const SignupPage({super.key});
@@ -80,6 +84,8 @@ class _SignUpFormState extends State<SignUpForm> {
   bool isLoading = false;
   bool isLocationLoading = false;
   bool isDonor = false;
+  bool isPhoneVerified = false;
+  bool isEmailVerified = false;
   String locationError = '';
   int _currentStep = 0;
   int _totalSteps = 3;
@@ -142,9 +148,145 @@ class _SignUpFormState extends State<SignUpForm> {
   }
 
   Future<void> submitSignUp() async {
-    GlobalKey<FormState> finalStepKey =
-        isDonor ?  _donorStepFormKey : _step3FormKey;
+    // GlobalKey<FormState> finalStepKey =
+    //     isDonor ? _donorStepFormKey : _step3FormKey;
+    GlobalKey<FormState> finalStepKey = _step3FormKey;
     if (!(finalStepKey.currentState?.validate() ?? false)) {
+    print("HERE");
+      return;
+    }
+
+    // You can add this check if you want to require email verification
+    // Or comment it out if you want it to be optional
+    /*
+    if (!isEmailVerified) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Email Verification Required",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF303030),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  const Text(
+                    "Please verify your email address to continue",
+                    style: TextStyle(color: Color(0xFF757575)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: EmailVerificationWidget(
+                      email: emailController.text,
+                      onVerificationComplete: (isVerified) {
+                        setState(() {
+                          isEmailVerified = isVerified;
+                        });
+                        Navigator.of(context).pop();
+
+                        // Continue with form submission if verified
+                        if (isVerified) {
+                          submitSignUp();
+                        }
+                      },
+                      showSkipButton: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+      return;
+    }
+    */
+
+    // Check phone verification
+    if (!isPhoneVerified) {
+      // Show dialog with verification widget
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Phone Verification Required",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF303030),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  const Text(
+                    "Please verify your phone number to continue",
+                    style: TextStyle(color: Color(0xFF757575)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: PhoneVerificationWidget(
+                      initialPhoneNumber: phoneNoController.text,
+                      onVerificationComplete: (isVerified) {
+                        setState(() {
+                          isPhoneVerified = isVerified;
+                        });
+                        Navigator.of(context).pop();
+
+                        // Continue with form submission if verified
+                        if (isVerified) {
+                          submitSignUp();
+                        }
+                      },
+                      showSkipButton: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
       return;
     }
 
@@ -556,14 +698,129 @@ class _SignUpFormState extends State<SignUpForm> {
                 labelText: "Phone Number",
                 icon: phoneIcon),
           ),
-          const Padding(
-            padding: EdgeInsets.only(left: 12.0, top: 8.0, bottom: 16.0),
-            child: Text(
-              "Enter a valid phone number to receive SMS notifications",
-              style: TextStyle(
-                fontSize: 12,
-                color: Color(0xFF757575),
-              ),
+          Padding(
+            padding: const EdgeInsets.only(left: 12.0, top: 8.0, bottom: 16.0),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    "Enter a valid phone number to receive SMS notifications",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF757575),
+                    ),
+                  ),
+                ),
+                if (isPhoneVerified)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check, color: Colors.white, size: 12),
+                        SizedBox(width: 4),
+                        Text(
+                          "Verified",
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  TextButton(
+                    onPressed: () {
+                      if (FormValidators.validatePhone(
+                              phoneNoController.text) ==
+                          null) {
+                        // Instead of just setting a flag, show dialog with the verification widget
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (BuildContext context) {
+                            return Dialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          "Phone Verification",
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF303030),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.close),
+                                          onPressed: () =>
+                                              Navigator.of(context).pop(),
+                                        ),
+                                      ],
+                                    ),
+                                    const Divider(),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16.0),
+                                      child: PhoneVerificationWidget(
+                                        initialPhoneNumber:
+                                            phoneNoController.text,
+                                        onVerificationComplete: (isVerified) {
+                                          setState(() {
+                                            isPhoneVerified = isVerified;
+                                          });
+                                          Navigator.of(context).pop();
+                                        },
+                                        showSkipButton: true,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      } else {
+                        CustomToast.show(
+                          context,
+                          message: "Please enter a valid phone number first",
+                          isError: true,
+                        );
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      "Verify",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFE0313B),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           Padding(
@@ -580,14 +837,126 @@ class _SignUpFormState extends State<SignUpForm> {
                   icon: emailIcon),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.only(left: 12.0, bottom: 16.0),
-            child: Text(
-              "We'll use this email for account verification",
-              style: TextStyle(
-                fontSize: 12,
-                color: Color(0xFF757575),
-              ),
+          Padding(
+            padding: const EdgeInsets.only(left: 12.0, top: 8.0, bottom: 16.0),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    "We'll use this email for account verification",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF757575),
+                    ),
+                  ),
+                ),
+                if (isEmailVerified)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check, color: Colors.white, size: 12),
+                        SizedBox(width: 4),
+                        Text(
+                          "Verified",
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  TextButton(
+                    onPressed: () {
+                      if (FormValidators.validateEmail(emailController.text) ==
+                          null) {
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (BuildContext context) {
+                            return Dialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          "Email Verification",
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF303030),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.close),
+                                          onPressed: () =>
+                                              Navigator.of(context).pop(),
+                                        ),
+                                      ],
+                                    ),
+                                    const Divider(),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16.0),
+                                      child: EmailVerificationWidget(
+                                        email: emailController.text,
+                                        onVerificationComplete: (isVerified) {
+                                          setState(() {
+                                            isEmailVerified = isVerified;
+                                          });
+                                          Navigator.of(context).pop();
+                                        },
+                                        showSkipButton: true,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      } else {
+                        CustomToast.show(
+                          context,
+                          message: "Please enter a valid email address first",
+                          isError: true,
+                        );
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      "Verify",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFE0313B),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ],

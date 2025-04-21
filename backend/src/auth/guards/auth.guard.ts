@@ -37,7 +37,6 @@ export class AuthGuard implements CanActivate {
         secret: jwtConstants.secret,
       });
 
-
       const user = {
         id: payload.sub,
         username: payload.username,

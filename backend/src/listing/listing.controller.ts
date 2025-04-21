@@ -171,7 +171,6 @@ export class ListingController {
 
   @Delete()
   async deleteListing(@Body('listingId') id) {
-    console.log(id);
     await this.listingService.deleteListing(id);
     return { success: true };
   }
@@ -179,8 +178,15 @@ export class ListingController {
   @Roles(Role.DONOR)
   @Post('donate/:listingId')
   async postListingAsDonor(@Param('listingId') listingId: string, @Body('donorId') donorId: string) {
-    console.log("Here", listingId, donorId);
     const result = await this.listingService.addListingToDonorActiveRequests(listingId, donorId);
     return { success: true, data: result };
   }
+
+  @Roles(Role.DONOR)
+  @Get("/donorActiveListing/:donorId")
+  async getDonorActiveListings(@Param("donorId") donorId: string) {
+    const result = await this.listingService.getDonorActiveListing(donorId);
+    return { success: true, data: result };
+  }
+
 }

@@ -1,6 +1,9 @@
 import 'package:app/core/enums/app_routes.dart';
 import 'package:app/core/storage/secure_storage.dart';
 import 'package:app/services/auth_services.dart';
+import 'package:app/services/listing_service.dart';
+
+// import 'package:app/services/donation_service.dart';
 import 'package:app/widgets/app_bar.dart';
 import 'package:app/widgets/nav_bar.dart';
 import 'package:flutter/material.dart';
@@ -411,7 +414,7 @@ class ActiveDonationsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final donationService = DonationService();
+    final listingService = ListingService();
     final _storage = GetIt.instance.get<SecureStorage>();
 
     return FutureBuilder<User?>(
@@ -436,9 +439,9 @@ class ActiveDonationsList extends StatelessWidget {
         // Get the current user ID
         final userId = userSnapshot.data!.id;
 
-        return FutureBuilder<List<ActiveDonation>>(
+        return FutureBuilder<List<Listing>>(
           // Fetch active donations for the current user
-          future: donationService.getActiveUserDonations(userId),
+          future: listingService.getActiveUserDonations(userId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Center(child: CircularProgressIndicator());
@@ -476,6 +479,12 @@ class ActiveDonationsList extends StatelessWidget {
               itemBuilder: (context, index) {
                 final donation = activeDonations[index];
 
+                // Get requester name from the user field
+                final requesterName =
+                    donation.user != null && donation.user['name'] != null
+                        ? donation.user['name']
+                        : "Unknown Requester";
+
                 return Card(
                   margin: EdgeInsets.symmetric(vertical: 8),
                   shape: RoundedRectangleBorder(
@@ -487,7 +496,7 @@ class ActiveDonationsList extends StatelessWidget {
                     leading: CircleAvatar(
                       backgroundColor: Colors.orange[100],
                       child: Text(
-                        donation.bloodType,
+                        donation.groupRequired,
                         style: TextStyle(
                           color: Colors.orange[700],
                           fontWeight: FontWeight.bold,
@@ -495,15 +504,18 @@ class ActiveDonationsList extends StatelessWidget {
                       ),
                     ),
                     title: Text(
-                      donation.patientName,
+                      requesterName,
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("At ${donation.hospitalName}"),
+                        if (donation.hospitalName != null &&
+                            donation.hospitalName!.isNotEmpty)
+                          Text("At ${donation.hospitalName}"),
                         Text(
-                            "Appointment: ${donation.appointmentDate.toLocal().toString().split(' ')[0]}"),
+                            "Needed by: ${donation.requiredTill.toLocal().toString().split(' ')[0]}"),
+                        Text("Status: In Progress"),
                       ],
                     ),
                     trailing: Container(
@@ -513,7 +525,7 @@ class ActiveDonationsList extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        "Pending",
+                        "${donation.bagsRequired} units",
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -522,7 +534,7 @@ class ActiveDonationsList extends StatelessWidget {
                     ),
                     onTap: () {
                       // Navigate to active donation details
-                      context.push('/active-donation/${donation.id}');
+                      context.push('/listing-details/${donation.id}');
                     },
                   ),
                 );
