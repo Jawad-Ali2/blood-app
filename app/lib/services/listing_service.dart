@@ -55,9 +55,14 @@ class Listing {
       address: json['address'],
       isEmergency: json['isEmergency'] ?? false,
       notes: json['notes'],
-      user: json['user'],
+      user: json['user'] ?? {},
       status: json['status'] ?? 'active',
       createdAt: DateTime.parse(json['createdAt']),
+      acceptedBy:
+          json['acceptedBy'] != null ? User.fromJson(json['acceptedBy']) : null,
+      fulfilledBy: json['fulfilledBy'] != null
+          ? User.fromJson(json['fulfilledBy'])
+          : null,
     );
   }
 }
@@ -81,14 +86,32 @@ class ListingService {
   Future<List<Listing>> getCompatibleListings() async {
     try {
       final bloodGroup = await _storage.getUserBloodGroup();
+
+      // Handle empty or null blood group gracefully
+      if (bloodGroup == null || bloodGroup.isEmpty) {
+        // If no blood group, get all active listings instead
+        final response = await _dioClient.dio.get('/listing');
+        final List<dynamic> data = response.data;
+        return data.map((json) => Listing.fromJson(json)).toList();
+      }
+
       final encodedBloodGroup = Uri.encodeComponent(bloodGroup);
       final response = await _dioClient.dio
           .get('/listing/compatible?bloodGroup=$encodedBloodGroup');
 
+      if (response.data == null) {
+        return []; // Return empty list if data is null
+      }
+
       final List<dynamic> data = response.data;
       return data.map((json) => Listing.fromJson(json)).toList();
     } on DioException catch (e) {
-      throw Exception('Failed to load compatible listings: ${e.message}');
+      print("Error in getCompatibleListings: ${e.message}");
+      // Return empty list on error instead of throwing exception
+      return [];
+    } catch (e) {
+      print("Unexpected error in getCompatibleListings: $e");
+      return [];
     }
   }
 
@@ -561,6 +584,44 @@ class ListingService {
         print("Response data: ${e.response?.data}");
       }
       throw Exception('Failed to load active donations: ${e.message}');
+    }
+  }
+
+  // Get recipient's in-progress listings
+  Future<List<Listing>> getRecipientInProgressListings() async {
+    final user = await _storage.getUser();
+    if (user == null) {
+      throw Exception('User not logged in');
+    }
+
+    try {
+      final response = await _dioClient.dio
+          .get('/listing/recipientActiveListing/${user.id}');
+
+      // Check the structure of the response data
+      final data = response.data;
+      List<Listing> listings = [];
+
+      // If the response is a list, process it directly
+      if (data is List) {
+        listings = data.map((json) => Listing.fromJson(json)).toList();
+      }
+      // If the response has success and data fields (data is a list)
+      else if (data is Map<String, dynamic> &&
+          data['success'] == true &&
+          data['data'] is List) {
+        listings = (data['data'] as List)
+            .map((json) => Listing.fromJson(json))
+            .toList();
+      }
+
+      return listings;
+    } on DioException catch (e) {
+      print("Error fetching in-progress listings: ${e.message}");
+      if (e.response != null) {
+        print("Response data: ${e.response?.data}");
+      }
+      throw Exception('Failed to load in-progress listings: ${e.message}');
     }
   }
 }

@@ -36,25 +36,37 @@ class _BloodRequestsPageState extends State<BloodRequestsPage> {
     try {
       // Get user's blood type from storage
       final bloodGroup = await _storage.getUserBloodGroup();
-      // if (!bloodGroup) {
-      setState(() {
-        _userBloodType = bloodGroup;
-        _compatibleTypes = _getCompatibleBloodTypes(bloodGroup!);
-      });
-      // }
 
-      // Load only compatible requests
+      // Safely handle null or empty blood group
+      setState(() {
+        if (bloodGroup != null && bloodGroup.isNotEmpty) {
+          _userBloodType = bloodGroup;
+          _compatibleTypes = _getCompatibleBloodTypes(bloodGroup);
+        } else {
+          _userBloodType = null;
+          _compatibleTypes = [];
+        }
+      });
+
+      // Load requests regardless of blood type availability
       await _loadRequests();
     } catch (e) {
       print("Error loading user data: $e");
       setState(() {
         _isLoading = false;
+        _userBloodType = null;
+        _compatibleTypes = [];
       });
     }
   }
 
   List<String> _getCompatibleBloodTypes(String bloodType) {
-    // Blood type compatibility chart (donor -> recipient)
+    // Validate input first
+    if (bloodType == null || bloodType.isEmpty) {
+      return [];
+    }
+
+    // Blood type compatibility chart
     switch (bloodType) {
       case 'O-':
         return ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'];
@@ -85,8 +97,9 @@ class _BloodRequestsPageState extends State<BloodRequestsPage> {
     try {
       final requests = await _listingService.getCompatibleListings();
       setState(() {
-        // Filter to only show compatible requests if user blood type is known
-        if (_userBloodType != null && _compatibleTypes.isNotEmpty) {
+        if (_userBloodType != null &&
+            _userBloodType!.isNotEmpty &&
+            _compatibleTypes.isNotEmpty) {
           _requests = requests
               .where(
                   (request) => _compatibleTypes.contains(request.groupRequired))
@@ -97,21 +110,25 @@ class _BloodRequestsPageState extends State<BloodRequestsPage> {
         _isLoading = false;
       });
     } catch (e) {
+      print("Error loading requests: $e");
       setState(() {
+        _requests = []; // Ensure we never have null
         _isLoading = false;
       });
-      // Handle error
     }
   }
 
   List<Listing> get _filteredRequests {
+    print(_requests);
     if (_selectedFilter == "All") {
       return _requests;
     } else if (_selectedFilter == "Urgent") {
       return _requests.where((request) => request.isEmergency).toList();
     } else {
       return _requests
-          .where((request) => request.groupRequired == _selectedFilter)
+          .where((request) =>
+              request.groupRequired == _selectedFilter &&
+              request.isEmergency == false)
           .toList();
     }
   }
@@ -280,6 +297,10 @@ class BloodCompatibilityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Always use a safe list to prevent null pointer errors
+    final List<String> safeTypes =
+        compatibleTypes.isNotEmpty ? compatibleTypes : [];
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       padding: EdgeInsets.all(16),
@@ -340,27 +361,45 @@ class BloodCompatibilityCard extends StatelessWidget {
             ),
           ),
           SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: compatibleTypes
-                .map((type) => Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white, width: 0.5),
-                      ),
-                      child: Text(
-                        type,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+          if (safeTypes.isNotEmpty)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: safeTypes
+                  .map((type) => Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white, width: 0.5),
                         ),
-                      ),
-                    ))
-                .toList(),
-          ),
+                        child: Text(
+                          type,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ))
+                  .toList(),
+            )
+          else
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white, width: 0.5),
+              ),
+              child: Text(
+                "No compatible types found",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
           SizedBox(height: 8),
           Row(
             children: [
@@ -429,6 +468,9 @@ class BloodRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Extract username safely from the user object
+    final String username = _extractUsernameFromUser(request.user);
+
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -466,7 +508,7 @@ class BloodRequestCard extends StatelessWidget {
               ),
               SizedBox(height: 12),
               Text(
-                "Dummy Name",
+                username,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -474,7 +516,9 @@ class BloodRequestCard extends StatelessWidget {
               ),
               SizedBox(height: 4),
               Text(
-                request.hospitalName!,
+                request.hospitalName != null && request.hospitalName!.isNotEmpty
+                    ? request.hospitalName!
+                    : "No hospital name provided",
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[800],
@@ -515,10 +559,8 @@ class BloodRequestCard extends StatelessWidget {
                 children: [
                   ElevatedButton(
                     onPressed: () {
-                      // context.push('/donate/${request.id}');
-                      ListingService().donateAndChangeStatus(context, request.id);
-                      // Refresh the page after donation
-                      // Navigator.pushReplacement(
+                      ListingService()
+                          .donateAndChangeStatus(context, request.id);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red[700],
@@ -551,6 +593,13 @@ class BloodRequestCard extends StatelessWidget {
     } else {
       return "Just now";
     }
+  }
+
+  String _extractUsernameFromUser(Map<String, dynamic> userMap) {
+    if (userMap.containsKey('username') && userMap['username'] != null) {
+      return userMap['username'].toString();
+    }
+    return "Anonymous";
   }
 }
 

@@ -102,6 +102,43 @@ class HomePage extends StatelessWidget {
               ),
             ),
 
+            // In-Progress Donations Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "My In-Progress Donations",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // Navigate to all requests (could be filtered to show only in-progress)
+                          context.push('/user-listings');
+                        },
+                        child: Text(
+                          "View All",
+                          style: TextStyle(
+                            color: Colors.red[600],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  InProgressDonationsList(),
+                ],
+              ),
+            ),
+
             StatsBar(),
             const SizedBox(height: 12),
 
@@ -451,6 +488,133 @@ class MyRequestsList extends StatelessWidget {
   }
 }
 
+// In-Progress Donations List
+class InProgressDonationsList extends StatelessWidget {
+  const InProgressDonationsList({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final listingService = ListingService();
+    final storage = GetIt.instance.get<SecureStorage>();
+
+    return FutureBuilder<User?>(
+      future: storage.getUser(),
+      builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (!userSnapshot.hasData || userSnapshot.data == null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                "Please log in to view your in-progress donations",
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          );
+        }
+
+        return FutureBuilder<List<Listing>>(
+          future: listingService.getRecipientInProgressListings(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  "Error: ${snapshot.error}",
+                  style: TextStyle(color: Colors.red),
+                ),
+              );
+            }
+
+            final listings = snapshot.data ?? [];
+
+            if (listings.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    "You don't have any in-progress donations",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              );
+            }
+
+            // Sort by creation date (newest first)
+            final sortedListings = [...listings]
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+            // Limit to showing only 2 most recent in-progress listings
+            return ListView.builder(
+              physics: NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              itemCount: sortedListings.length > 2 ? 2 : sortedListings.length,
+              itemBuilder: (context, index) {
+                final listing = sortedListings[index];
+                final donor = listing.acceptedBy;
+
+                return Card(
+                  margin: EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.green.shade600, width: 1.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    contentPadding: EdgeInsets.all(12),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.green[100],
+                      child: Text(
+                        listing.groupRequired,
+                        style: TextStyle(
+                          color: Colors.green[700],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      "${listing.bagsRequired} units at ${listing.hospitalName ?? 'Not specified'}",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (donor != null)
+                          Text(
+                              "Donor: ${donor.username}"),
+                        Text(
+                            "Created: ${listing.createdAt.toLocal().toString().split(' ')[0]}"),
+                      ],
+                    ),
+                    trailing: Chip(
+                      label: Text(
+                        "In Progress",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                      backgroundColor: Colors.green[600],
+                    ),
+                    onTap: () {
+                      // Navigate to request details
+                    },
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
 class Banner extends StatelessWidget {
   const Banner({
     super.key,
@@ -492,12 +656,12 @@ class Banner extends StatelessWidget {
             ),
             SizedBox(height: 8),
             ElevatedButton(
-              onPressed: () {
-              },
+              onPressed: () {},
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red[600],
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -593,4 +757,3 @@ const bellIcon =
 ''';
 const filterIcon =
     '''<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#525252"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g id="style=linear"> <g id="filter-circle"> <path id="vector" d="M2 17.5H7" stroke="#525252" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> <path id="vector_2" d="M22 6.5H17" stroke="#525252" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> <path id="vector_3" d="M13 17.5H22" stroke="#525252" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> <path id="vector_4" d="M11 6.5H2" stroke="#525252" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> <path id="vector_5" d="M10 20.3999C8.34315 20.3999 7 19.0568 7 17.3999C7 15.743 8.34315 14.3999 10 14.3999C11.6569 14.3999 13 15.743 13 17.3999C13 19.0568 11.6569 20.3999 10 20.3999Z" stroke="#525252" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> <path id="vector_6" d="M14 9.3999C15.6569 9.3999 17 8.05676 17 6.3999C17 4.74305 15.6569 3.3999 14 3.3999C12.3431 3.3999 11 4.74305 11 6.3999C11 8.05676 12.3431 9.3999 14 9.3999Z" stroke="#525252" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> </g> </g> </g></svg>''';
-

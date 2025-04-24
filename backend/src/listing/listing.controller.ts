@@ -189,4 +189,12 @@ export class ListingController {
     return { success: true, data: result };
   }
 
+
+  @Roles(Role.RECIPIENT)
+  @Get("/recipientActiveListing/:recipientId")
+  async getRecipientActiveListings(@Param("recipientId") recipientId: string) {
+    const result = await this.listingService.getRecipientActiveListing(recipientId);
+    return { success: true, data: result };
+  }
+
 }

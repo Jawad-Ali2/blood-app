@@ -24,7 +24,8 @@ class _UserListingsPageState extends State<UserListingsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController =
+        TabController(length: 5, vsync: this); // Correctly set to 5 tabs
     _fetchListings();
   }
 
@@ -71,6 +72,10 @@ class _UserListingsPageState extends State<UserListingsPage>
           .where(
               (listing) => !listing.isEmergency && listing.status == 'active')
           .toList();
+    } else if (status == 'In Progress') {
+      return allListings
+          .where((listing) => listing.status == 'in-progress')
+          .toList();
     } else if (status == 'Fulfilled') {
       return allListings
           .where((listing) => listing.status == 'fulfilled')
@@ -104,6 +109,7 @@ class _UserListingsPageState extends State<UserListingsPage>
           tabs: const [
             Tab(text: "Emergency"),
             Tab(text: "Active"),
+            Tab(text: "In Progress"),
             Tab(text: "Fulfilled"),
             Tab(text: "Canceled"),
           ],
@@ -116,6 +122,7 @@ class _UserListingsPageState extends State<UserListingsPage>
               children: [
                 _buildListingList('Emergency'),
                 _buildListingList('Active'),
+                _buildListingList('In Progress'),
                 _buildListingList('Fulfilled'),
                 _buildListingList('Canceled'),
               ],
@@ -184,6 +191,11 @@ class _UserListingsPageState extends State<UserListingsPage>
         cardColor = Colors.blue[50]!;
         statusColor = Colors.blue[700]!;
         statusIcon = Icons.check_circle;
+        break;
+      case 'In Progress':
+        cardColor = Colors.amber[50]!;
+        statusColor = Colors.amber[700]!;
+        statusIcon = Icons.pending_actions;
         break;
       case 'Fulfilled':
         cardColor = Colors.green[50]!;
@@ -344,6 +356,10 @@ class _UserListingsPageState extends State<UserListingsPage>
         statusColor = Colors.blue[700]!;
         statusText = "Active";
         break;
+      case 'In Progress':
+        statusColor = Colors.amber[700]!;
+        statusText = "In Progress";
+        break;
       case 'Fulfilled':
         statusColor = Colors.green[700]!;
         statusText = "Fulfilled";
@@ -394,16 +410,366 @@ class _UserListingsPageState extends State<UserListingsPage>
                 _buildDetailRow(
                     "Pick & Drop", listing.pickAndDrop ? "Yes" : "No"),
                 _buildDetailRow("Will Pay", listing.willPay ? "Yes" : "No"),
-                if (listing.notes != null && listing.notes!.isNotEmpty) ...[
+                if (listing.status == 'in-progress' &&
+                    listing.acceptedBy != null) ...[
                   const SizedBox(height: 16),
-                  const Text(
-                    "Additional Notes:",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
+
+                  // Donor profile summary
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Section header
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.person_pin_circle,
+                              color: Colors.green.shade800,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Donor Information",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.green.shade800,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 16),
+
+                        // Donor profile with photo
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 24,
+                              backgroundColor: Colors.green.shade100,
+                              foregroundColor: Colors.green.shade800,
+                              child: Text(
+                                listing.acceptedBy?.bloodGroup?.substring(
+                                        0,
+                                        listing.acceptedBy!.bloodGroup.length >
+                                                2
+                                            ? 2
+                                            : 1) ??
+                                    "?",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "${listing.acceptedBy?.firstName ?? ''} ${listing.acceptedBy?.lastName ?? listing.acceptedBy?.username ?? 'Anonymous Donor'}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.bloodtype,
+                                          size: 14, color: Colors.red.shade700),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        "Blood Group: ${listing.acceptedBy?.bloodGroup ?? 'Unknown'}",
+                                        style:
+                                            TextStyle(color: Colors.grey[700]),
+                                      ),
+                                    ],
+                                  ),
+                                  if (listing.acceptedBy?.city != null)
+                                    Row(
+                                      children: [
+                                        Icon(Icons.location_on,
+                                            size: 14,
+                                            color: Colors.blue.shade700),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          listing.acceptedBy!.city!,
+                                          style: TextStyle(
+                                              color: Colors.grey[700]),
+                                        ),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ),
+
+                            // Contact button if phone available
+                            if (listing.acceptedBy?.phone != null)
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.all(8),
+                                child: Icon(Icons.phone,
+                                    color: Colors.green.shade800, size: 20),
+                              ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Transaction details
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Donation Details",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildDonationInfoItem(
+                                      Icons.bloodtype,
+                                      "Donating",
+                                      "${listing.bagsRequired} unit${listing.bagsRequired > 1 ? 's' : ''}",
+                                      Colors.red.shade700,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _buildDonationInfoItem(
+                                      Icons.access_time,
+                                      "Status",
+                                      "In Progress",
+                                      Colors.amber.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildDonationInfoItem(
+                                      Icons.calendar_today,
+                                      "Accepted on",
+                                      "${DateTime.now().difference(listing.createdAt).inDays} days ago",
+                                      Colors.blue.shade700,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _buildDonationInfoItem(
+                                      Icons.timeline,
+                                      "Required Till",
+                                      "${listing.requiredTill.difference(DateTime.now()).inDays} days left",
+                                      listing.requiredTill
+                                                  .difference(DateTime.now())
+                                                  .inDays <
+                                              3
+                                          ? Colors.red.shade700
+                                          : Colors.green.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Hospital/Location information
+                        if (listing.hospitalName != null)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.local_hospital,
+                                    color: Colors.blue.shade700),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Hospital / Location",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: Colors.blue.shade800,
+                                        ),
+                                      ),
+                                      Text(
+                                        listing.hospitalName!,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      if (listing.address != null)
+                                        Text(
+                                          listing.address!,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[700],
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Map icon
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade100,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: const EdgeInsets.all(8),
+                                  child: Icon(Icons.map,
+                                      color: Colors.blue.shade800, size: 20),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                        // Donation features
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            if (listing.pickAndDrop)
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: Colors.purple.shade200),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.transfer_within_a_station,
+                                          color: Colors.purple.shade700,
+                                          size: 20),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        "Pick & Drop",
+                                        style: TextStyle(
+                                          color: Colors.purple.shade700,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            if (listing.pickAndDrop && listing.willPay)
+                              const SizedBox(width: 8),
+                            if (listing.willPay)
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: Colors.green.shade200),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.monetization_on,
+                                          color: Colors.green.shade700,
+                                          size: 20),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        "Paid Donation",
+                                        style: TextStyle(
+                                          color: Colors.green.shade700,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(listing.notes!),
+
+                  const SizedBox(height: 16),
+
+                  // Information about completion
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber[200]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.amber[700]),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Confirm Donation Completion",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.amber[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "This will increase your donor's credibility points and help build trust in the community.",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.amber[900],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Confirming completion ensures the donation record is properly maintained and helps other recipients find reliable donors.",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.amber[900],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -436,6 +802,18 @@ class _UserListingsPageState extends State<UserListingsPage>
                   "Mark Fulfilled",
                   style: TextStyle(color: Colors.green[700]),
                 ),
+              ),
+            if (category == 'In Progress')
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _showFulfillConfirmationDialog(listing);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green[700],
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text("Mark Donation Complete"),
               ),
             if (category == 'Canceled')
               TextButton(
@@ -533,13 +911,144 @@ class _UserListingsPageState extends State<UserListingsPage>
   }
 
   void _showFulfillConfirmationDialog(Listing listing) {
+    final bool isInProgress = listing.status == 'in-progress';
+    final String title =
+        isInProgress ? "Confirm Donation Complete" : "Mark as Fulfilled?";
+    final String message = isInProgress
+        ? "Are you sure you want to mark this donation as complete? This will finalize the process and express your gratitude to the donor."
+        : "Are you sure you want to mark this request as fulfilled? This indicates you've received the blood you needed.";
+    final String confirmText =
+        isInProgress ? "Yes, Donation Complete" : "Yes, Mark Fulfilled";
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("Mark as Fulfilled?"),
-          content: const Text(
-            "Are you sure you want to mark this request as fulfilled? This indicates you've received the blood you needed.",
+          title: Text(title),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(message),
+              if (isInProgress) ...[
+                const SizedBox(height: 16),
+
+                // Donor profile summary
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Colors.green.shade100,
+                            foregroundColor: Colors.green.shade800,
+                            child: const Icon(Icons.person),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "${listing.acceptedBy?.firstName ?? ''} ${listing.acceptedBy?.lastName ?? listing.acceptedBy?.username ?? 'Anonymous Donor'}",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                Text(
+                                  "Blood Group: ${listing.acceptedBy?.bloodGroup ?? 'Unknown'}",
+                                  style: TextStyle(color: Colors.grey[700]),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const Divider(height: 24),
+
+                      // Donation details
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDonationInfoItem(
+                              Icons.bloodtype,
+                              "Donating",
+                              "${listing.bagsRequired} unit${listing.bagsRequired > 1 ? 's' : ''}",
+                              Colors.red.shade700,
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildDonationInfoItem(
+                              Icons.access_time,
+                              "Status",
+                              "In Progress",
+                              Colors.amber.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      if (listing.hospitalName != null)
+                        _buildDonationInfoItem(
+                          Icons.local_hospital,
+                          "Location",
+                          listing.hospitalName!,
+                          Colors.blue.shade700,
+                        ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.amber[700]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "This will increase your donor's credibility points and help build trust in the community.",
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.amber[900],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Confirming completion ensures the donation record is properly maintained.",
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.amber[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
           actions: [
             TextButton(
@@ -548,7 +1057,7 @@ class _UserListingsPageState extends State<UserListingsPage>
               },
               child: const Text("No"),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () async {
                 Navigator.of(context).pop();
                 try {
@@ -556,8 +1065,10 @@ class _UserListingsPageState extends State<UserListingsPage>
                   await _fetchListings();
 
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Request marked as fulfilled"),
+                    SnackBar(
+                      content: Text(isInProgress
+                          ? "Donation marked as complete. Thank you!"
+                          : "Request marked as fulfilled"),
                       backgroundColor: Colors.green,
                     ),
                   );
@@ -570,14 +1081,52 @@ class _UserListingsPageState extends State<UserListingsPage>
                   );
                 }
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[700],
+              ),
               child: Text(
-                "Yes, Mark Fulfilled",
-                style: TextStyle(color: Colors.green[700]),
+                confirmText,
+                style: const TextStyle(color: Colors.white),
               ),
             ),
           ],
         );
       },
+    );
+  }
+
+  // Helper method for donation information items
+  Widget _buildDonationInfoItem(
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

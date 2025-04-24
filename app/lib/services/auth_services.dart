@@ -15,21 +15,67 @@ class User {
   final String email;
   final List<String> role;
   final String bloodGroup;
+  final String? phone;
+  final String? cnic;
+  final String? city;
+  final String? coordinates;
+  final DateTime? dateOfBirth;
+  final bool? isVerified;
+  final bool? isDonor;
+  final DateTime? lastDonationDate;
+  final int? credibilityPoints;
+  final DateTime? createdAt;
+  final String? firstName;
+  final String? lastName;
 
-  User(
-      {required this.id,
-      required this.username,
-      required this.email,
-      required this.role,
-      this.bloodGroup = ""});
+  User({
+    required this.id,
+    required this.username,
+    required this.email,
+    required this.role,
+    this.bloodGroup = "",
+    this.phone,
+    this.cnic,
+    this.city,
+    this.coordinates,
+    this.dateOfBirth,
+    this.isVerified,
+    this.isDonor,
+    this.lastDonationDate,
+    this.credibilityPoints,
+    this.createdAt,
+    this.firstName,
+    this.lastName,
+  });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'],
       username: json['username'],
-      email: json['email'],
-      role: List<String>.from(json['role']),
+      email: json['email'] ?? '',
+      role: json['role'] is List
+          ? List<String>.from(json['role'])
+          : json['role'] is String
+              ? jsonDecode(json['role']).cast<String>()
+              : ['recipient'],
       bloodGroup: json['bloodGroup'] ?? "",
+      phone: json['phone'],
+      cnic: json['cnic'],
+      city: json['city'],
+      coordinates: json['coordinates'],
+      dateOfBirth: json['dateOfBirth'] != null || json['dob'] != null
+          ? DateTime.parse(json['dateOfBirth'] ?? json['dob'])
+          : null,
+      isVerified: json['isVerified'],
+      isDonor: json['isDonor'],
+      lastDonationDate: json['lastDonationDate'] != null
+          ? DateTime.parse(json['lastDonationDate'])
+          : null,
+      credibilityPoints: json['credibilityPoints'],
+      createdAt:
+          json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
+      firstName: json['firstName'],
+      lastName: json['lastName'],
     );
   }
 
@@ -40,6 +86,18 @@ class User {
       'email': email,
       'role': role,
       'bloodGroup': bloodGroup,
+      'phone': phone,
+      'cnic': cnic,
+      'city': city,
+      'coordinates': coordinates,
+      'dateOfBirth': dateOfBirth?.toIso8601String(),
+      'isVerified': isVerified,
+      'isDonor': isDonor,
+      'lastDonationDate': lastDonationDate?.toIso8601String(),
+      'credibilityPoints': credibilityPoints,
+      'createdAt': createdAt?.toIso8601String(),
+      'firstName': firstName,
+      'lastName': lastName,
     };
   }
 }

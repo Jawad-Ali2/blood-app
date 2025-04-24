@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Listing } from './entities/listings';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { PostListingDTO } from './dto/post-listing.dto';
 import { User } from 'src/user/entities/user.entity';
-import { ListingStatus } from 'src/constants';
+import { bloodTypeCrossMatch, ListingStatus } from 'src/constants';
 import { FcmService } from 'src/fcm/fcm.service';
 import { bloodGroupToTopic } from 'src/utils/blood_topics';
 
@@ -16,7 +16,7 @@ export class ListingService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private readonly FcmService: FcmService,
-  ) {}
+  ) { }
 
   async postListing(listingData: PostListingDTO): Promise<Listing> {
     // Find the user
@@ -75,7 +75,7 @@ export class ListingService {
       const topic = bloodGroupToTopic(listingData.groupRequired); // e.g., 'O+', 'A-'
       const title = '🚨 Blood Needed Urgently';
       const body = `Someone needs ${listingData.groupRequired} blood nearby. Tap to help.`;
-  
+
       await this.FcmService.sendToTopic(topic, title, body, {
         listingId: savedListing.id.toString(),
         requesterId: savedListing.user.id.toString(),
@@ -164,16 +164,27 @@ export class ListingService {
   }
 
   async getCompatibleListings(bloodGroup: string): Promise<Listing[]> {
+    // Check to which blood types the given blood group can donate
+    const compatibleBloodGroups = bloodTypeCrossMatch[bloodGroup] || [];
+
+    if (compatibleBloodGroups.length === 0) {
+      throw new BadRequestException(`No compatible blood groups found for ${bloodGroup}`);
+    }
+
+    // Find listings that match the compatible blood groups
     const listings = await this.listingRepository.find({
       where: {
         status: 'active',
-        isEmergency: false,
-        groupRequired: bloodGroup
+        // isEmergency: false,
+        groupRequired: In(compatibleBloodGroups) // Use In operator to match any of the compatible groups
       },
       relations: ['user'],
       order: { createdAt: 'DESC' }
     });
 
+    console.log(listings);
+    
+    console.log(`Found ${listings.length} compatible listings for blood group ${bloodGroup}`);
     return listings;
   }
 
@@ -258,7 +269,7 @@ export class ListingService {
   }
 
 
-  async getDonorActiveListing(donorId: string) : Promise<Listing[]> {
+  async getDonorActiveListing(donorId: string): Promise<Listing[]> {
     try {
       const listings = await this.listingRepository.find({
         where: {
@@ -273,6 +284,22 @@ export class ListingService {
       throw new BadRequestException(`Failed to get donor active listing: ${error.message}`);
     }
 
+  }
+
+  async getRecipientActiveListing(recipientId: string): Promise<Listing[]> {
+    try {
+      const listings = await this.listingRepository.find({
+        where: {
+          user: { id: recipientId },
+          status: ListingStatus.IN_PROGRESS,
+        },
+        relations: ['acceptedBy'],
+      });
+
+      return listings;
+    } catch (error) {
+      throw new BadRequestException(`Failed to get recipient active listing: ${error.message}`);
+    }
   }
 
   // Helper method to check blood type compatibility

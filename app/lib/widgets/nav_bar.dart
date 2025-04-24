@@ -5,7 +5,9 @@ import '../core/enums/app_routes.dart';
 import 'create_request_dialog.dart';
 
 class BloodNavBar extends StatelessWidget {
-  BloodNavBar({super.key});
+  final userRole;
+
+  BloodNavBar({super.key, this.userRole});
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +20,17 @@ class BloodNavBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             IconButton(
+              tooltip: 'Home',
+              icon: const Icon(Icons.home),
+              onPressed: () {
+                if (userRole != null && userRole.contains('donor')) {
+                  context.push(AppRoutes.donorHome.path);
+                } else {
+                  context.push(AppRoutes.home.path);
+                }
+              },
+            ),
+            IconButton(
               tooltip: 'Profile',
               icon: const Icon(Icons.person),
               onPressed: () {
@@ -29,6 +42,12 @@ class BloodNavBar extends StatelessWidget {
               icon: const Icon(Icons.settings),
               onPressed: () {
                 context.push(AppRoutes.settings.path);
+              },
+            ),IconButton(
+              tooltip: 'Switch Mode',
+              icon: const Icon(Icons.swap_horiz),
+              onPressed: () {
+                // context.push(AppRoutes.settings.path);
               },
             ),
           ],
